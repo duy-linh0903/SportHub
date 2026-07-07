@@ -1,0 +1,16 @@
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace SportHub.DTOs.Field
+{
+    public class CreateFieldDto
+    {
+        [Required, StringLength(100)]
+        public string Name { get; set; }
+        [Required, StringLength(50)]
+        public string Type { get; set; }
+        public string? Description { get; set; }
+        [Required,Range(0,double.MaxValue)]
+        public double PricePerSlot { get; set; }
+        public List<FieldImageDto> Images { get; set; } = new List<FieldImageDto>();
+    }
+}

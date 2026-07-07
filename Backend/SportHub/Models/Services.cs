@@ -9,7 +9,7 @@ namespace SportHub.Models
         [Required] 
         public string Name { get; set; }
         [Required, Range(0,double.MaxValue)]
-        public string Price { get; set; }
+        public double Price { get; set; }
         public string? Description { get; set; }    
     }
 }
