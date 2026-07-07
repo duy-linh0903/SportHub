@@ -1,0 +1,33 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.log
+
+# Visual Studio
+.vs/
+
+# React Native / Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Android
+android/.gradle/
+android/app/build/
+android/build/
+
+# iOS
+ios/Pods/
+ios/build/
+*.xcworkspace/xcuserdata/
+*.xcuserdatad/
+*.xcuserstate
+
+# Misc
+.DS_Store
+Thumbs.db
