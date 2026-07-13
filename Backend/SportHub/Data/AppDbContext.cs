@@ -12,7 +12,7 @@ namespace SportHub.Data
         public DbSet<UserRoles> UserRoles { get; set; }
         public DbSet<SportCenters> SportCenters { get; set; }
         public DbSet<Fields> Fields { get; set; }
-        public DbSet<Services> Services { get; set; }
+        public DbSet<ServiceItem> ServiceItem { get; set; }
         public DbSet<Bookings> Bookings { get; set; }
         public DbSet<BookingServices> BookingServices { get; set; }
         public DbSet<TimeSlots> TimeSlots { get; set; }
@@ -77,12 +77,14 @@ namespace SportHub.Data
             modelBuilder.Entity<Reviews>()
                 .HasOne(r => r.Users)
                 .WithMany()
-                .HasForeignKey(r => r.UserId);
+                .HasForeignKey(r => r.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Reviews>()
-                .HasOne(r => r.Fields)
+                .HasOne(r => r.SportCenters)
                 .WithMany()
-                .HasForeignKey(r => r.FieldId);
+                .HasForeignKey(r => r.SportCenterId)
+                .OnDelete(DeleteBehavior.NoAction);
 
             modelBuilder.Entity<Reviews>()
                 .HasOne(r => r.Bookings)

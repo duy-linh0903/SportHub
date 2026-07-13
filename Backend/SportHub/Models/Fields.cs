@@ -11,9 +11,9 @@ namespace SportHub.Models
         public Guid SportCenterId { get; set; }
         [ForeignKey(nameof(SportCenterId))]
         public virtual SportCenters SportCenter { get; set; }
-        [Required]
+        [Required, StringLength(50)]
         public string Name { get; set; }
-        [Required]
+        [Required,StringLength(50)]
         public string Type { get; set; }
         [Required]
         public double PricePerSlot { get; set; }

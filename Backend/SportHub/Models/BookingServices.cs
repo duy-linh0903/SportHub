@@ -14,7 +14,7 @@ namespace SportHub.Models
         [Required]
         public Guid ServiceId { get; set; }
         [ForeignKey(nameof(ServiceId))]
-        public virtual Services Services { get; set; }
+        public virtual ServiceItem Services { get; set; }
         [Required, Range(0, int.MaxValue)]
         public int Quantity { get; set; }
         [Required,Range(0,double.MaxValue)]

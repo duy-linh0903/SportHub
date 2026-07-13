@@ -1,4 +1,6 @@
 using SportHub.Data;
+using SportHub.Repositories.Implementations;
+using SportHub.Repositories.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -10,8 +12,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<AppDbContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("DBConnection")));
 
-// Add interface to use (có interface nào thì thêm đó)
-//builder.Services.AddScoped<IFruitRepository, FruitRepository>();
+// Repositories
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+builder.Services.AddScoped<IFieldRepository, FieldRepository>();
+builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
+builder.Services.AddScoped<IServiceRepository, ServiceRepository>();
+builder.Services.AddScoped<ISportCenterRepository, SportCenterRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
 
 // Add services to the container.
 builder.Services.AddControllers();

@@ -12,9 +12,9 @@ namespace SportHub.Models
         [ForeignKey(nameof(UserId))]
         public virtual Users Users { get; set; }
         [Required]
-        public Guid FieldId { get; set; }
-        [ForeignKey(nameof(FieldId))]
-        public virtual Fields  Fields {  get; set; }
+        public Guid SportCenterId { get; set; }
+        [ForeignKey(nameof(SportCenterId))]
+        public virtual SportCenters  SportCenters {  get; set; }
         [Required]
         public Guid BookingId {  get; set; }
         [ForeignKey(nameof(BookingId))]

@@ -4,6 +4,8 @@ namespace SportHub.DTOs.Field
 {
     public class UpdateFieldDto
     {
+        [Required]
+        public Guid SportCenterId { get; set; }
         [StringLength(100)]
         public string Name { get; set; }
         [StringLength(50)]
