@@ -8,5 +8,9 @@ namespace SportHub.Models
         public Guid Id { get; set; }
         [Required]
         public string RoleName { get; set; }
+        public Roles()
+        {
+            Id = Guid.NewGuid();
+        }
     }
 }

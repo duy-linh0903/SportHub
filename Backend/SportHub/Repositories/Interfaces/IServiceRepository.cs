@@ -9,6 +9,6 @@ namespace SportHub.Repositories.Interfaces
         Task AddAsync(ServiceItem service);
         Task UpdateAsync(ServiceItem updateService);
         Task DeleteAsync(Guid id);
-        Task<List<ServiceItem>> GetByFieldType(string type);
+        Task<List<ServiceItem>> GetByFieldTypeAsync(string type);
     }
 }

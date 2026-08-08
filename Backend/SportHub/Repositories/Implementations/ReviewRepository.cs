@@ -14,7 +14,7 @@ namespace SportHub.Repositories.Implementations
             _context = context;
         }
 
-        public async Task<List<Reviews>> GetBySportCenterId(Guid id)
+        public async Task<List<Reviews>> GetBySportCenterIdAsync(Guid id)
         {
             var result = await _context.Reviews.Where(r => r.SportCenterId == id).ToListAsync();
             return result;

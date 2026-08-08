@@ -1,3 +1,4 @@
+using SportHub.Models;
 using System.ComponentModel.DataAnnotations;
 
 namespace SportHub.DTOs.SportCenter
@@ -8,5 +9,6 @@ namespace SportHub.DTOs.SportCenter
         public string Name { get; set; }
         public string Address { get; set; }
         public string? Description { get; set; }
+        public List<SportCenterImages> images { get; set; }
     }
 }

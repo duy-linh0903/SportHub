@@ -19,5 +19,9 @@ namespace SportHub.Models
         public int Quantity { get; set; }
         [Required,Range(0,double.MaxValue)]
         public double Price { get; set; }
+        public BookingServices()
+        {
+            Id = Guid.NewGuid();
+        }
     }
 }

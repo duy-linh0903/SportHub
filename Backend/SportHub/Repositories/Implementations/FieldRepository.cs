@@ -38,19 +38,14 @@ namespace SportHub.Repositories.Implementations
                 field.Name = updateField.Name;
                 field.Type = updateField.Type;
                 field.PricePerSlot = updateField.PricePerSlot;
-                field.Description = updateField.Description;
                 await _context.SaveChangesAsync();
             }
         }
 
-        public async Task DeleteAsync(Guid id)
+        public async Task DeleteAsync(Fields field)
         {
-            var field = await _context.Fields.FirstOrDefaultAsync(f => f.Id==id);
-            if (field != null)
-            {
-                field.Status = "Deleted";
-                await _context.SaveChangesAsync();
-            }
+            field.Status = FieldStatus.Deleted;
+            await _context.SaveChangesAsync();
         }
 
         public async Task<List<Fields>> GetBySportCenterId(Guid centerId)

@@ -10,5 +10,9 @@ namespace SportHub.Models
         public TimeOnly StartTime { get; set; }
         [Required]
         public TimeOnly EndTime { get; set; }
+        public TimeSlots()
+        {
+            Id = Guid.NewGuid();
+        }
     }
 }

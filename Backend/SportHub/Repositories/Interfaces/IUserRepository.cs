@@ -6,8 +6,11 @@ namespace SportHub.Repositories.Interfaces
     {
         Task<List<Users>> GetAllAsync();
         Task<Users?> GetByIdAsync(Guid id);
+        Task<Users?> GetByEmailAsync(string email);
+        Task<bool> EmailExistsAsync(string email);
         Task AddAsync(Users registerUser);
         Task UpdateAsync(Users updateUser);
         Task DeleteAsync(Guid id);
+        Task UpdatePasswordAsync(Guid userId, string passwordHash);
     }
 }

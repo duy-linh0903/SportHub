@@ -5,6 +5,8 @@ namespace SportHub.DTOs.Review
     public class CreateReviewDto
     {
         [Required]
+        public Guid UserId { get; set; }
+        [Required]
         public Guid SportCenterId { get; set; }
         [Required]
         public Guid BookingId { get; set; }

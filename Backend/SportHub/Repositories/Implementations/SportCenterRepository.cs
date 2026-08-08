@@ -47,7 +47,7 @@ namespace SportHub.Repositories.Implementations
             var sport = await _context.SportCenters.FirstOrDefaultAsync(s => s.Id == id);
             if (sport != null)
             {
-                sport.Status = "Deleted";
+                sport.Status = SportCenterStatus.Deleted;
                 await _context.SaveChangesAsync();
             }
         }

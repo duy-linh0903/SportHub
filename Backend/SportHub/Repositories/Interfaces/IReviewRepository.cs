@@ -4,7 +4,7 @@ namespace SportHub.Repositories.Interfaces
 {
     public interface IReviewRepository
     {
-        Task<List<Reviews>> GetBySportCenterId(Guid id);
+        Task<List<Reviews>> GetBySportCenterIdAsync(Guid id);
         Task AddAsync(Reviews review);
     }
 }

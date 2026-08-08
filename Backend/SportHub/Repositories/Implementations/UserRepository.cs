@@ -25,6 +25,16 @@ namespace SportHub.Repositories.Implementations
             return await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
         }
 
+        public async Task<Users?> GetByEmailAsync(string email)
+        {
+            return await _context.Users.FirstOrDefaultAsync(u=>u.Email == email);
+        }
+
+        public async Task<bool> EmailExistsAsync(string email)
+        {
+            return await _context.Users.AnyAsync(u => u.Email == email);
+        }
+
         public async Task AddAsync(Users registerUser)
         {
             await _context.Users.AddAsync(registerUser);
@@ -43,12 +53,22 @@ namespace SportHub.Repositories.Implementations
             ;
         }
 
+        public async Task UpdatePasswordAsync(Guid userId, string passwordHash)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            if (user != null)
+            {
+                user.PasswordHash = passwordHash;
+                await _context.SaveChangesAsync();
+            }
+        }
+
         public async Task DeleteAsync(Guid id)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
             if (user!=null)
             {
-                user.Status = "Deleted";
+                user.Status = UserStatus.Deleted;
                 await _context.SaveChangesAsync();
             }
         }

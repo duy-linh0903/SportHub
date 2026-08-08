@@ -23,6 +23,11 @@ namespace SportHub.Models
         public int Rating { get; set; }
         [Required]
         public string Comment { get; set; }
-        public DateTime CreatedAt { get; set; } = DateTime.Now;
+        public DateTime CreatedAt { get; set; }
+        public Reviews()
+        {
+            Id = Guid.NewGuid();
+            CreatedAt = DateTime.Now;
+        }
     }
 }

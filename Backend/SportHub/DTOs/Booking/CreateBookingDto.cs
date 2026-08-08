@@ -8,9 +8,11 @@ namespace SportHub.DTOs.Booking
         [Required]
         public Guid FieldId { get; set; }
         [Required]
+        public Guid UserId { get; set; }
+        [Required]
         public DateOnly BookingDate { get; set; }
         [MinLength(1)]
         public List<Guid> SlotIds { get; set; } = new List<Guid>();
-        public List<BookingServiceRequestDto> Services { get; set; } = new List<BookingServiceRequestDto>();
+        public List<BookingServiceRequestDto> ServiceList { get; set; } = new List<BookingServiceRequestDto>();
     }
 }

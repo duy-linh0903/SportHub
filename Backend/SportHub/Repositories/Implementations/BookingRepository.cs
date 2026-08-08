@@ -35,7 +35,7 @@ namespace SportHub.Repositories.Implementations
             var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == id);
             if (booking != null)
             {
-                booking.Status = "Deleted";
+                booking.Status = BookingStatus.Deleted;
                 await _context.SaveChangesAsync();
             }
         }
@@ -74,8 +74,50 @@ namespace SportHub.Repositories.Implementations
             var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
             if (booking != null)
             {
-                booking.Status = newStatus;
+                if (Enum.TryParse<BookingStatus>(newStatus, true, out var parsedStatus))
+                {
+                    booking.Status = parsedStatus;
+                    await _context.SaveChangesAsync();
+                }
+            }
+        }
+
+        public async Task<List<TimeSlots>> GetTimeSlotsByIdsAsync(List<Guid> ids)
+        {
+            return await _context.TimeSlots.Where(ts => ids.Contains(ts.Id)).ToListAsync();
+        }
+
+        public async Task<bool> AnySlotConflictAsync(List<Guid> slotIds, Guid fieldId, DateOnly bookingDate)
+        {
+            return await _context.BookingSlots.AnyAsync(bs =>
+                slotIds.Contains(bs.SlotId) &&
+                bs.Bookings.FieldId == fieldId &&
+                bs.Bookings.BookingDate == bookingDate &&
+                (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed));
+        }
+
+        public async Task CreateBookingWithDetailsAsync(Bookings booking, List<BookingServices> bookingServices, List<BookingSlots> bookingSlots)
+        {
+            await using var trx = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                await _context.Bookings.AddAsync(booking);
+                if (bookingServices != null && bookingServices.Any())
+                {
+                    await _context.BookingServices.AddRangeAsync(bookingServices);
+                }
+                if (bookingSlots != null && bookingSlots.Any())
+                {
+                    await _context.BookingSlots.AddRangeAsync(bookingSlots);
+                }
+
                 await _context.SaveChangesAsync();
+                await trx.CommitAsync();
+            }
+            catch
+            {
+                await trx.RollbackAsync();
+                throw;
             }
         }
     }

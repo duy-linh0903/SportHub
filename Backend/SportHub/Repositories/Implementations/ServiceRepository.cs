@@ -48,12 +48,12 @@ namespace SportHub.Repositories.Implementations
             var service = await _context.ServiceItem.FirstOrDefaultAsync(s => s.Id == id);
             if (service !=null)
             {
-                service.Status = "Deleted";
+                service.Status = ServiceStatus.Deleted;
                 await _context.SaveChangesAsync();
             }
         }
 
-        public async Task<List<ServiceItem>> GetByFieldType(string type)
+        public async Task<List<ServiceItem>> GetByFieldTypeAsync(string type)
         {
             return await _context.ServiceItem.Where(s => s.Type == type).ToListAsync();
         }

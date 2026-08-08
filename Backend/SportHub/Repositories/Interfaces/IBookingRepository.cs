@@ -6,6 +6,8 @@ namespace SportHub.Repositories.Interfaces
     {
         Task<List<Bookings>> GetAllAsync();
         Task<Bookings?> GetByIdAsync(Guid id);
+        Task<List<TimeSlots>> GetTimeSlotsByIdsAsync(List<Guid> ids);
+        Task<bool> AnySlotConflictAsync(List<Guid> slotIds, Guid fieldId, DateOnly bookingDate);
         Task AddAsync(Bookings addBooking);
         Task DeleteAsync(Guid id);
         Task<List<Bookings>> GetBySportCenterId(Guid centerId);
@@ -13,5 +15,6 @@ namespace SportHub.Repositories.Interfaces
         Task<List<Bookings>> GetByFieldId(Guid fieldId);
         Task<List<Bookings>> GetByDateRange(DateOnly startDate, DateOnly endDate);
         Task UpdateStatusAsync(Guid bookingId, string newStatus);
+        Task CreateBookingWithDetailsAsync(Bookings booking, List<BookingServices> bookingServices, List<BookingSlots> bookingSlots);
     }
 }

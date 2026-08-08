@@ -8,7 +8,7 @@ namespace SportHub.Repositories.Interfaces
         Task<Fields?> GetByIdAsync(Guid id);
         Task AddAsync(Fields addField);
         Task UpdateAsync(Fields updateField);
-        Task DeleteAsync(Guid id);
+        Task DeleteAsync(Fields field);
         Task<List<Fields>> GetBySportCenterId(Guid centerId);
         Task<List<Fields>> GetByType(string type);
         Task<List<Fields>> GetByPriceRange(double minPrice, double maxPrice);

@@ -3,6 +3,13 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SportHub.Models
 {
+    public enum FieldStatus
+    {
+        Active = 0,
+        Inactive = 1,
+        Deleted = 2
+    }
+
     public class Fields
     {
         [Key]
@@ -17,8 +24,12 @@ namespace SportHub.Models
         public string Type { get; set; }
         [Required]
         public double PricePerSlot { get; set; }
-        public string Status { get; set; }
-        public string? Description { get; set; }
-        public DateTime CreatedAt { get; set; }  = DateTime.Now;
+        public FieldStatus Status { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public Fields()
+        {
+            Id = Guid.NewGuid();
+            CreatedAt = DateTime.Now;
+        }
     }
 }
