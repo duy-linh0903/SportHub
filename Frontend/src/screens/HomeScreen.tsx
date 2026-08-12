@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -8,23 +8,103 @@ import {
   TouchableOpacity,
   Modal,
   FlatList,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { sportCentersApi } from '../api/sportCentersApi';
+import { reviewsApi } from '../api/reviewsApi';
+import { SportCenterResponseDto } from '../types/api';
 
 // Dummy danh sách khu vực - sau này thay bằng API lấy theo vị trí GPS
 const LOCATIONS = [
   'Quận 1, TP. HCM',
+  'Quận 2, TP. HCM',
   'Quận 3, TP. HCM',
+  'Quận 4, TP. HCM',
   'Quận 5, TP. HCM',
+  'Quận 6, TP. HCM',
   'Quận 7, TP. HCM',
+  'Quận 8, TP. HCM',
+  'Quận 9, TP. HCM',
   'Quận 10, TP. HCM',
+  'Quận 11, TP. HCM',
+  'Quận 12, TP. HCM',
   'Thành phố Thủ Đức',
+  'Quận Bình Thạnh',
+  'Quận Phú Nhuận',
+  'Quận Gò Vấp',
+  'Quận Tân Bình',
+  'Quận Tân Phú',
+  'Quận Bình Tân',
+  'Huyện Bình Chánh',
+  'Huyện Hóc Môn',
+  'Huyện Củ Chi',
+  'Huyện Nhà Bè',
+  'Huyện Cần Giờ'
+];
+
+const SPORT_CATEGORIES = [
+  { id: 'football', name: 'Bóng đá', icon: 'football-outline', keywords: ['bóng đá', 'cỏ nhân tạo', 'chảo lửa', 'arena'] },
+  { id: 'tennis', name: 'Tennis', icon: 'tennisball-outline', keywords: ['tennis', 'quần vợt', 'đất nện', 'lan anh'] },
+  { id: 'basketball', name: 'Bóng rổ', icon: 'basketball-outline', keywords: ['bóng rổ', 'hoop'] },
+  { id: 'badminton', name: 'Cầu lông', icon: 'stopwatch-outline', keywords: ['cầu lông'] },
+  { id: 'swimming', name: 'Bơi lội', icon: 'water-outline', keywords: ['bơi', 'hồ bơi', 'yết kiêu'] },
+  { id: 'volleyball', name: 'Bóng chuyền', icon: 'baseball-outline', keywords: ['bóng chuyền'] },
+  { id: 'golf', name: 'Golf', icon: 'golf-outline', keywords: ['golf'] },
+  { id: 'pingpong', name: 'Bóng bàn', icon: 'disc-outline', keywords: ['bóng bàn'] },
 ];
 
 const HomeScreen = ({ navigation }: { navigation: any }) => {
   const [selectedLocation, setSelectedLocation] = useState(LOCATIONS[0]);
   const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [sportCenters, setSportCenters] = useState<SportCenterResponseDto[]>([]);
+  const [ratings, setRatings] = useState<Record<string, number>>({});
+  const [loadingCenters, setLoadingCenters] = useState(true);
+  const [selectedSport, setSelectedSport] = useState<string | null>(null);
+
+  const filteredCenters = !selectedSport 
+    ? sportCenters 
+    : sportCenters.filter(center => {
+        const cat = SPORT_CATEGORIES.find(c => c.id === selectedSport);
+        if (!cat) return true;
+        const text = ((center.name || '') + ' ' + (center.description || '')).toLowerCase();
+        return cat.keywords.some(kw => text.includes(kw));
+      });
+
+  useEffect(() => {
+    fetchSportCenters();
+  }, []);
+
+  const fetchSportCenters = async () => {
+    setLoadingCenters(true);
+    try {
+      const data = await sportCentersApi.getAll();
+      setSportCenters(data);
+      
+      // Fetch ratings for all centers
+      const ratingsData: Record<string, number> = {};
+      await Promise.all(
+        data.map(async (center) => {
+          try {
+            const reviews = await reviewsApi.getBySportCenter(center.sportCenterId);
+            const count = reviews.length;
+            ratingsData[center.sportCenterId] = count > 0 
+              ? reviews.reduce((sum, r) => sum + r.rating, 0) / count 
+              : 0;
+          } catch (e) {
+            ratingsData[center.sportCenterId] = 0;
+          }
+        })
+      );
+      setRatings(ratingsData);
+    } catch (error) {
+      console.error('Failed to fetch sport centers:', error);
+    } finally {
+      setLoadingCenters(false);
+    }
+  };
 
   const handleSelectLocation = (loc: string) => {
     setSelectedLocation(loc);
@@ -45,13 +125,21 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
             <Text style={styles.locationText}>{selectedLocation}</Text>
             <Ionicons name="chevron-down" size={16} color="#666" />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.notificationBtn}
-            onPress={() => navigation.navigate('Notification')}
-          >
-            <Ionicons name="notifications-outline" size={24} color="#333" />
-            <View style={styles.notificationDot} />
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.headerBtn}
+              onPress={() => navigation.navigate('Map')}
+            >
+              <Ionicons name="map-outline" size={24} color="#333" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.notificationBtn}
+              onPress={() => navigation.navigate('Notification')}
+            >
+              <Ionicons name="notifications-outline" size={24} color="#333" />
+              <View style={styles.notificationDot} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* 2. Thanh tìm kiếm - bấm vào sẽ mở màn hình Tìm kiếm */}
@@ -81,94 +169,79 @@ const HomeScreen = ({ navigation }: { navigation: any }) => {
         {/* 4. Danh mục Môn thể thao */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Môn thể thao</Text>
-          <TouchableOpacity><Text style={styles.seeAllText}>Tất cả</Text></TouchableOpacity>
         </View>
-        <View style={styles.categoryContainer}>
-          <TouchableOpacity style={styles.categoryItem}>
-            <View style={styles.categoryIconBox}>
-              <Ionicons name="football-outline" size={24} color="#333" />
-            </View>
-            <Text style={styles.categoryText}>Bóng đá</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.categoryItem}>
-            <View style={styles.categoryIconBox}>
-              <Ionicons name="tennisball-outline" size={24} color="#333" />
-            </View>
-            <Text style={styles.categoryText}>Tennis</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.categoryItem}>
-            <View style={styles.categoryIconBox}>
-              <Ionicons name="basketball-outline" size={24} color="#333" />
-            </View>
-            <Text style={styles.categoryText}>Bóng rổ</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.categoryItem}>
-            <View style={styles.categoryIconBox}>
-              <Ionicons name="barbell-outline" size={24} color="#333" />
-            </View>
-            <Text style={styles.categoryText}>Gym</Text>
-          </TouchableOpacity>
+        <View style={styles.categoryGrid}>
+          {SPORT_CATEGORIES.map(cat => {
+            const isActive = selectedSport === cat.id;
+            return (
+              <TouchableOpacity 
+                key={cat.id} 
+                style={[styles.categoryItem, isActive && styles.categoryItemActive]} 
+                onPress={() => setSelectedSport(isActive ? null : cat.id)}
+              >
+                <View style={[styles.categoryIconBox, isActive && styles.categoryIconBoxActive]}>
+                  <Ionicons name={cat.icon} size={24} color={isActive ? '#ffffff' : '#333'} />
+                </View>
+                <Text style={[styles.categoryText, isActive && styles.categoryTextActive]}>{cat.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* 5. Sân nổi bật */}
         <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Sân nổi bật</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('VenueList')}>
-                <Text style={styles.seeAllText}>Xem thêm</Text>
-            </TouchableOpacity>
+          <Text style={styles.sectionTitle}>Sân Thể Thao Phổ Biến</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('VenueList')}>
+            <Text style={styles.seeAllText}>Xem tất cả</Text>
+          </TouchableOpacity>
         </View>
         
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.venueScroll}>
-          {/* Card Sân 1 */}
-          <TouchableOpacity 
-            style={styles.venueCard} 
-            activeOpacity={0.9}
-            onPress={() => navigation.navigate('Detail')}
-          >
-            <View style={styles.venueImagePlaceholder}>
-              <Text style={styles.imageText}>Ảnh Sân Bóng</Text>
-              <View style={styles.ratingBadge}>
-                <Ionicons name="star" size={12} color="#F97316" />
-                <Text style={styles.ratingText}>4.8</Text>
-              </View>
-            </View>
-            <View style={styles.venueInfo}>
-              <Text style={styles.venueName} numberOfLines={1}>Sân bóng Đại Thế Giới</Text>
-              <Text style={styles.venueAddress} numberOfLines={1}>Quận 5 • 2.5km</Text>
-              <View style={styles.priceRow}>
-                <Text style={styles.venuePrice}>250.000đ<Text style={styles.priceUnit}>/giờ</Text></Text>
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusText}>Còn sân</Text>
-                </View>
-              </View>
-            </View>
-          </TouchableOpacity>
-
-          {/* Card Sân 2 */}
-          <TouchableOpacity 
-            style={styles.venueCard} 
-            activeOpacity={0.9}
-            onPress={() => navigation.navigate('Detail')}
-          >
-            <View style={[styles.venueImagePlaceholder, { backgroundColor: '#3755c3' }]}>
-              <Text style={styles.imageText}>Ảnh Sân Cầu Lông</Text>
-              <View style={styles.ratingBadge}>
-                <Ionicons name="star" size={12} color="#F97316" />
-                <Text style={styles.ratingText}>4.5</Text>
-              </View>
-            </View>
-            <View style={styles.venueInfo}>
-              <Text style={styles.venueName} numberOfLines={1}>Cầu lông Kỳ Hòa</Text>
-              <Text style={styles.venueAddress} numberOfLines={1}>Quận 10 • 3.2km</Text>
-              <View style={styles.priceRow}>
-                <Text style={styles.venuePrice}>120.000đ<Text style={styles.priceUnit}>/giờ</Text></Text>
-                <View style={styles.statusBadge}>
-                  <Text style={styles.statusText}>Còn sân</Text>
-                </View>
-              </View>
-            </View>
-          </TouchableOpacity>
-        </ScrollView>
+        {loadingCenters ? (
+          <ActivityIndicator size="large" color="#006e2f" style={{ marginVertical: 20 }} />
+        ) : (
+          <View style={styles.venueList}>
+            {filteredCenters.length > 0 ? (
+              filteredCenters.map((center) => (
+                <TouchableOpacity 
+                  key={center.sportCenterId} 
+                  style={styles.venueCard}
+                  activeOpacity={0.9}
+                  onPress={() => navigation.navigate('Detail', { sportCenterId: center.sportCenterId })}
+                >
+                  <View style={styles.venueImagePlaceholder}>
+                    {center.images && center.images.length > 0 && center.images[0].url ? (
+                      <Image source={{ uri: center.images[0].url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                    ) : (
+                      <Text style={styles.imageText}>Ảnh {center.name}</Text>
+                    )}
+                    <View style={styles.ratingBadge}>
+                      <Ionicons name="star" size={12} color="#F97316" />
+                      <Text style={styles.ratingText}>
+                        {ratings[center.sportCenterId] > 0 ? ratings[center.sportCenterId].toFixed(1) : '0'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.venueInfo}>
+                    <Text style={styles.venueName} numberOfLines={2}>
+                      {center.name}
+                    </Text>
+                    <Text style={styles.venueAddress} numberOfLines={2}>
+                      <Ionicons name="location-outline" size={12} color="#666" /> {center.address}
+                    </Text>
+                    <View style={styles.priceRow}>
+                      <Text style={styles.venuePrice}>{center.minPrice ? `${center.minPrice.toLocaleString('vi-VN')}đ` : 'Đang cập nhật'}<Text style={styles.priceUnit}>{center.minPrice ? '/giờ' : ''}</Text></Text>
+                      <View style={styles.statusBadge}>
+                        <Text style={styles.statusText}>Còn sân</Text>
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <Text style={{ color: '#666' }}>Không có sân nào.</Text>
+            )}
+          </View>
+        )}
 
       </ScrollView>
 
@@ -241,7 +314,15 @@ const styles = StyleSheet.create({
   locationText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#1a1a1a',
+    color: '#111827',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  headerBtn: {
+    padding: 4,
   },
   notificationBtn: {
     position: 'relative',
@@ -318,15 +399,21 @@ const styles = StyleSheet.create({
     color: '#22c55e',
     fontWeight: '600',
   },
-  categoryContainer: {
+  categoryGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     paddingHorizontal: 20,
-    marginBottom: 32,
+    justifyContent: 'space-between',
+    marginBottom: 16,
   },
   categoryItem: {
+    width: '22%', // Allows 4 items per row with space-between
     alignItems: 'center',
     gap: 8,
+    marginBottom: 16,
+  },
+  categoryItemActive: {
+    opacity: 1,
   },
   categoryIconBox: {
     width: 60,
@@ -336,20 +423,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  categoryIconBoxActive: {
+    backgroundColor: '#22c55e',
+  },
   categoryText: {
     fontSize: 13,
     color: '#333',
     fontWeight: '500',
   },
-  venueScroll: {
-    paddingLeft: 20,
+  categoryTextActive: {
+    color: '#22c55e',
+    fontWeight: 'bold',
+  },
+  venueList: {
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingBottom: 20,
   },
   venueCard: {
-    width: 260,
+    width: '48%',
     backgroundColor: '#ffffff',
     borderRadius: 16,
-    marginRight: 16,
     borderWidth: 1,
+    marginBottom: 16,
     borderColor: '#e6e8ea',
     shadowColor: '#1e40af',
     shadowOffset: { width: 0, height: 4 },
@@ -358,7 +456,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   venueImagePlaceholder: {
-    height: 140,
+    height: 120,
     backgroundColor: '#6d7b6c',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
@@ -389,26 +487,28 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   venueInfo: {
-    padding: 16,
+    padding: 12,
   },
   venueName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#1a1a1a',
     marginBottom: 4,
+    lineHeight: 20,
   },
   venueAddress: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#666',
     marginBottom: 12,
+    lineHeight: 18,
   },
   priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 6,
   },
   venuePrice: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#006e2f',
   },

@@ -1,7 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
+import { useAuthStore } from '../store/useAuthStore';
+import { bookingsApi } from '../api/bookingsApi';
+import { fieldsApi } from '../api/fieldsApi';
+import { BookingResponseDto, FieldResponseDto } from '../types/api';
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 interface BookingItem {
   id: string;
@@ -9,37 +16,107 @@ interface BookingItem {
   date: string;
   time: string;
   address: string;
-  status: 'confirmed' | 'completed' | 'cancelled';
+  status: 'pending' | 'confirmed' | 'completed' | 'cancelled';
   price: string;
+  originalData: BookingResponseDto;
 }
-
-const BOOKINGS: BookingItem[] = [
-  { id: '1', name: 'Sân bóng Đá Ca Nhân Tạo', date: '25 Tháng 10, 2023', time: '19:00 - 19:30', address: 'Bình Chánh Cao Cấp', status: 'confirmed', price: '240.000đ' },
-  { id: '2', name: 'Cầu lông quốc tế Cí...', date: '18 Tháng 10, 2023', time: '19:00 - 21:00', address: 'Quận 10', status: 'completed', price: '180.000đ' },
-  { id: '3', name: 'Tennis Rooftop...', date: '30 Tháng 10, 2023', time: '08:00 - 10:00', address: 'Quận 3', status: 'cancelled', price: '350.000đ' },
-];
 
 const TABS = [
   { key: 'all', label: 'Tất cả' },
+  { key: 'pending', label: 'Chờ duyệt' },
   { key: 'confirmed', label: 'Sắp tới' },
   { key: 'completed', label: 'Đã xong' },
 ] as const;
 
 const STATUS_META: Record<BookingItem['status'], { label: string; bg: string; color: string }> = {
+  pending: { label: 'CHỜ DUYỆT', bg: '#fff7ed', color: '#F97316' },
   confirmed: { label: 'ĐÃ THANH TOÁN', bg: '#e6f4ea', color: '#22c55e' },
   completed: { label: 'ĐÃ XONG', bg: '#f2f4f6', color: '#666' },
   cancelled: { label: 'ĐÃ HỦY', bg: '#fef2f2', color: '#ba1a1a' },
 };
 
 const BookingScreen = ({ navigation }: { navigation: any }) => {
-  const [tab, setTab] = useState<'all' | 'confirmed' | 'completed'>('all');
+  const { userId, isAuthenticated } = useAuthStore();
+  const [tab, setTab] = useState<'all' | 'pending' | 'confirmed' | 'completed'>('all');
   const [query, setQuery] = useState('');
+  
+  const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = BOOKINGS.filter((b) => {
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated && userId) {
+        fetchBookings();
+      } else {
+        setLoading(false);
+      }
+    }, [isAuthenticated, userId])
+  );
+
+  const fetchBookings = async () => {
+    setLoading(true);
+    try {
+      // Fetch bookings for the user
+      const userBookings = await bookingsApi.getByUser(userId!);
+      // Fetch all fields to map the names
+      const allFields = await fieldsApi.getAll();
+      const fieldMap = new Map<string, FieldResponseDto>();
+      allFields.forEach(f => fieldMap.set(f.fieldId, f));
+
+      const mappedBookings: BookingItem[] = userBookings.map(b => {
+        const field = fieldMap.get(b.fieldId);
+        let status: 'pending' | 'confirmed' | 'completed' | 'cancelled' = 'pending';
+        const bStatus = String(b.status).toLowerCase();
+        if (bStatus === 'confirmed' || bStatus === '1') status = 'confirmed';
+        if (bStatus === 'completed' || bStatus === '3') status = 'completed';
+        if (bStatus === 'cancelled' || bStatus === '2') status = 'cancelled';
+
+        let formattedDate = b.bookingDate;
+        try {
+          formattedDate = format(new Date(b.bookingDate), 'dd MMMM, yyyy', { locale: vi });
+        } catch (e) {}
+
+        return {
+          id: b.bookingId,
+          name: b.sportCenterName || field?.name || 'Sân thể thao',
+          date: formattedDate,
+          time: b.timeSlots || '',
+          address: b.sportCenterAddress || 'Địa chỉ sân',
+          status: status,
+          price: `${b.totalPrice.toLocaleString('vi-VN')}đ`,
+          originalData: b
+        };
+      });
+
+      // Sort by date descending
+      mappedBookings.sort((a, b) => new Date(b.originalData.bookingDate).getTime() - new Date(a.originalData.bookingDate).getTime());
+
+      setBookings(mappedBookings);
+    } catch (error) {
+      console.error('Failed to fetch bookings:', error);
+      Alert.alert('Lỗi', 'Không thể tải danh sách đặt sân.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filtered = bookings.filter((b) => {
     const matchesTab = tab === 'all' || b.status === tab;
     const matchesQuery = b.name.toLowerCase().includes(query.toLowerCase());
     return matchesTab && matchesQuery;
   });
+
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Ionicons name="lock-closed-outline" size={64} color="#d1d5db" />
+        <Text style={{ marginTop: 16, fontSize: 16, color: '#666' }}>Vui lòng đăng nhập để xem lịch đặt sân</Text>
+        <TouchableOpacity style={styles.loginBtn} onPress={() => navigation.navigate('Login')}>
+          <Text style={styles.loginBtnText}>Đăng nhập</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -71,55 +148,61 @@ const BookingScreen = ({ navigation }: { navigation: any }) => {
         ))}
       </View>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="calendar-outline" size={44} color="#d1d5db" />
-            <Text style={styles.emptyText}>Không có lịch đặt nào</Text>
-          </View>
-        }
-        renderItem={({ item }) => {
-          const meta = STATUS_META[item.status];
-          return (
-            <TouchableOpacity
-              style={styles.card}
-              onPress={() => navigation.navigate('TicketDetail', { bookingCode: item.id, field: item })}
-            >
-              <View style={styles.thumb}>
-                <Ionicons name="tennisball-outline" size={22} color="#22c55e" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={styles.cardHeaderRow}>
-                  <Text style={styles.venueName} numberOfLines={1}>{item.name}</Text>
-                  <View style={[styles.badge, { backgroundColor: meta.bg }]}>
-                    <Text style={[styles.badgeText, { color: meta.color }]}>{meta.label}</Text>
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#22c55e" />
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="calendar-outline" size={44} color="#d1d5db" />
+              <Text style={styles.emptyText}>Không có lịch đặt nào</Text>
+            </View>
+          }
+          renderItem={({ item }) => {
+            const meta = STATUS_META[item.status];
+            return (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => navigation.navigate('TicketDetail', { bookingCode: item.id, field: item })}
+              >
+                <View style={styles.thumb}>
+                  <Ionicons name="tennisball-outline" size={22} color="#22c55e" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={styles.cardHeaderRow}>
+                    <Text style={styles.venueName} numberOfLines={1}>{item.name}</Text>
+                    <View style={[styles.badge, { backgroundColor: meta.bg }]}>
+                      <Text style={[styles.badgeText, { color: meta.color }]}>{meta.label}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.infoText}>{item.date}</Text>
+                  <View style={styles.cardFooter}>
+                    <Text style={styles.price}>{item.price}</Text>
+                    {item.status === 'confirmed' ? (
+                      <TouchableOpacity
+                        style={styles.qrBtn}
+                        onPress={() => navigation.navigate('TicketDetail', { bookingCode: item.id, field: item })}
+                      >
+                        <Ionicons name="qr-code-outline" size={14} color="#fff" />
+                        <Text style={styles.qrText}>Lấy mã QR</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity style={styles.rebookBtn} onPress={() => navigation.navigate('SelectTime')}>
+                        <Text style={styles.rebookText}>Đặt lại sân</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
-                <Text style={styles.infoText}>{item.date} • {item.time}</Text>
-                <View style={styles.cardFooter}>
-                  <Text style={styles.price}>{item.price}</Text>
-                  {item.status === 'confirmed' ? (
-                    <TouchableOpacity
-                      style={styles.qrBtn}
-                      onPress={() => navigation.navigate('TicketDetail', { bookingCode: item.id, field: item })}
-                    >
-                      <Ionicons name="qr-code-outline" size={14} color="#fff" />
-                      <Text style={styles.qrText}>Lấy mã QR</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity style={styles.rebookBtn} onPress={() => navigation.navigate('SelectTime')}>
-                      <Text style={styles.rebookText}>Đặt lại sân</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        }}
-      />
+              </TouchableOpacity>
+            );
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -151,6 +234,8 @@ const styles = StyleSheet.create({
   rebookText: { color: '#22c55e', fontSize: 11, fontWeight: '700' },
   emptyState: { alignItems: 'center', paddingTop: 100, gap: 12 },
   emptyText: { fontSize: 14, color: '#9ca3af' },
+  loginBtn: { marginTop: 24, backgroundColor: '#22c55e', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 12 },
+  loginBtnText: { color: '#fff', fontSize: 16, fontWeight: 'bold' },
 });
 
 export default BookingScreen;

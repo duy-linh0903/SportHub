@@ -9,6 +9,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
+import { authApi } from '../api/authApi';
+import { Alert } from 'react-native';
+
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 
@@ -17,6 +20,7 @@ const OTPVerificationScreen = ({ navigation, route }: { navigation: any; route: 
   const context = route?.params?.context || 'forgot-password';
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
   const [countdown, setCountdown] = useState(RESEND_SECONDS);
+  const [isLoading, setIsLoading] = useState(false);
   const inputRefs = useRef<Array<TextInput | null>>([]);
 
   useEffect(() => {
@@ -24,6 +28,16 @@ const OTPVerificationScreen = ({ navigation, route }: { navigation: any; route: 
     const timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
     return () => clearTimeout(timer);
   }, [countdown]);
+
+  const handleResend = async () => {
+    try {
+      setCountdown(RESEND_SECONDS);
+      await authApi.forgotPassword({ email });
+      Alert.alert('Thành công', 'Mã OTP mới đã được gửi.');
+    } catch (error: any) {
+      Alert.alert('Lỗi', error.response?.data?.message || 'Có lỗi xảy ra khi gửi lại OTP.');
+    }
+  };
 
   const handleChange = (text: string, index: number) => {
     const value = text.replace(/[^0-9]/g, '');
@@ -43,11 +57,21 @@ const OTPVerificationScreen = ({ navigation, route }: { navigation: any; route: 
 
   const isComplete = otp.every((d) => d !== '');
 
-  const handleVerify = () => {
-    if (context === 'forgot-password') {
-      navigation.navigate('ResetPassword', { email });
-    } else {
-      navigation.goBack();
+  const handleVerify = async () => {
+    if (!isComplete) return;
+    setIsLoading(true);
+    try {
+      const otpString = otp.join('');
+      await authApi.verifyOtp({ email, otp: otpString });
+      if (context === 'forgot-password') {
+        navigation.navigate('ResetPassword', { email, otp: otpString });
+      } else {
+        navigation.goBack();
+      }
+    } catch (error: any) {
+      Alert.alert('Lỗi', error.response?.data?.message || 'Mã OTP không hợp lệ.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -74,7 +98,7 @@ const OTPVerificationScreen = ({ navigation, route }: { navigation: any; route: 
           {otp.map((digit, index) => (
             <TextInput
               key={index}
-              ref={(ref) => (inputRefs.current[index] = ref)}
+              ref={(ref) => { inputRefs.current[index] = ref; }}
               style={[styles.otpBox, digit !== '' && styles.otpBoxFilled]}
               value={digit}
               onChangeText={(text) => handleChange(text, index)}
@@ -86,7 +110,7 @@ const OTPVerificationScreen = ({ navigation, route }: { navigation: any; route: 
           ))}
         </View>
 
-        <TouchableOpacity disabled={countdown > 0} style={styles.resendRow}>
+        <TouchableOpacity disabled={countdown > 0} style={styles.resendRow} onPress={handleResend}>
           <Text style={styles.resendText}>
             {countdown > 0
               ? `Gửi lại mã sau ${countdown}s`

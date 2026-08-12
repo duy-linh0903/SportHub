@@ -1,6 +1,9 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useEffect } from 'react';
+import { useAuthStore } from './src/store/useAuthStore';
+import NotificationService from './src/services/NotificationService';
 
 import SplashScreen from './src/screens/SplashScreen';
 import LoginScreen from './src/screens/LoginScreen';
@@ -29,6 +32,8 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import PrivacyPolicyScreen from './src/screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from './src/screens/TermsOfServiceScreen';
 import AboutScreen from './src/screens/AboutScreen';
+import MapScreen from './src/screens/MapScreen';
+import PaymentScreen from './src/screens/PaymentScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -38,33 +43,45 @@ export type RootStackParamList = {
   MainTab: undefined;
   AdminTab: undefined;
   AdminEditField: { field?: any } | undefined;
-  Detail: undefined;
-  SelectTime: undefined;
+  Detail: { sportCenterId: string } | undefined;
+  SelectTime: { sportCenterId: string; sportCenterAddress?: string; sportCenterName?: string } | undefined;
   VenueList: undefined;
-  Addon: undefined;
-  Checkout: { field?: any; selectedServices?: any[] } | undefined;
+  Addon: { bookingData: any } | undefined;
+  Checkout: { bookingData?: any; selectedServices?: any[] } | undefined;
   PaymentMethod: { currentMethod?: string } | undefined;
   BookingSuccess: { field?: any; totalPrice?: number; paymentMethod?: string } | undefined;
   TicketDetail: { bookingCode?: string; field?: any; totalPrice?: number } | undefined;
   WriteReview: { field?: any } | undefined;
-  ReviewList: { fieldName?: string } | undefined;
+  ReviewList: { fieldName?: string; sportCenterId?: string } | undefined;
   ForgotPassword: undefined;
   OTPVerification: { email?: string; context?: 'forgot-password' } | undefined;
   ResetPassword: { email?: string } | undefined;
   ChangePassword: undefined;
   Notification: undefined;
-  EditProfile: { fullName?: string; phone?: string; email?: string; area?: string } | undefined;
+  EditProfile: { profile?: any } | undefined;
   Settings: undefined;
   PrivacyPolicy: undefined;
   TermsOfService: undefined;
   About: undefined;
+  Map: undefined;
+  Payment: { paymentUrl: string; bookingData: any; totalPrice: number; selectedPayment: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
+  const { isAuthenticated } = useAuthStore();
+  
+  useEffect(() => {
+    if (isAuthenticated) {
+      NotificationService.startConnection();
+    } else {
+      NotificationService.stopConnection();
+    }
+  }, [isAuthenticated]);
+
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={DefaultTheme}>
       <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Splash">
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
@@ -93,6 +110,8 @@ export default function App() {
         <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
         <Stack.Screen name="TermsOfService" component={TermsOfServiceScreen} />
         <Stack.Screen name="About" component={AboutScreen} />
+        <Stack.Screen name="Map" component={MapScreen} />
+        <Stack.Screen name="Payment" component={PaymentScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

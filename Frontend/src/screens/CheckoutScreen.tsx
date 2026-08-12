@@ -5,18 +5,16 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { bookingsApi } from '../api/bookingsApi';
+import { CreateBookingDto } from '../types/api';
+import { useAuthStore } from '../store/useAuthStore';
 
-// ===== Dummy Data - mô phỏng model Booking / Field / ServiceItem =====
-interface SelectedService {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-}
-
+// ===== Dummy Data for Payment =====
 interface PaymentMethod {
   id: string;
   name: string;
@@ -24,47 +22,88 @@ interface PaymentMethod {
   description: string;
 }
 
-const DUMMY_FIELD = {
-  name: 'Sân Cầu Lông SportHub A1',
-  address: 'Thiên Sơn Cao Cấp, Q7, TP.HCM',
-  date: 'Thứ Bảy, 25 Tháng 10, 2023',
-  time: '19:00 - 20:00 (2 giờ)',
-  price: 240000,
-};
-
-const DUMMY_SELECTED_SERVICES: SelectedService[] = [
-  { id: 'SV02', name: 'Thuê trọng tài', price: 200000, quantity: 1 },
-  { id: 'SV03', name: 'Nước suối Aquafina', price: 10000, quantity: 3 },
-];
-
 const PAYMENT_METHODS: PaymentMethod[] = [
-  { id: 'momo', name: 'Ví MoMo', icon: 'wallet-outline', description: 'Thanh toán qua ví MoMo' },
+  { id: 'vnpay', name: 'VNPAY', icon: 'wallet-outline', description: 'Thanh toán qua VNPAY' },
   { id: 'bank', name: 'Thẻ ngân hàng (ATM/Visa/Master)', icon: 'card-outline', description: 'Hỗ trợ hầu hết ngân hàng nội địa' },
   { id: 'cash', name: 'Tiền mặt tại quầy', icon: 'cash-outline', description: 'Thanh toán khi nhận sân' },
 ];
 
 const CheckoutScreen = ({ navigation, route }: { navigation: any; route: any }) => {
-  const field = route?.params?.field || DUMMY_FIELD;
-  const selectedServices: SelectedService[] =
-    route?.params?.selectedServices || DUMMY_SELECTED_SERVICES;
-  const [selectedPayment, setSelectedPayment] = useState(PAYMENT_METHODS[0].id);
+  const { userId, isAuthenticated } = useAuthStore();
+  const { bookingData, selectedServices } = route.params || {};
 
-  const fieldPrice = field.price;
-  const servicesPrice = selectedServices.reduce((sum, s) => sum + s.price * s.quantity, 0);
+  const [selectedPayment, setSelectedPayment] = useState(PAYMENT_METHODS[0].id);
+  const [loading, setLoading] = useState(false);
+
+  // Use the passed bookingData
+  const fieldPrice = bookingData?.totalPrice || 0;
+  const servicesPrice = (selectedServices || []).reduce((sum: number, s: any) => sum + s.price * s.quantity, 0);
   const totalPrice = fieldPrice + servicesPrice;
 
-  const handleConfirm = () => {
-    navigation.navigate('BookingSuccess', {
-      field,
-      totalPrice,
-      paymentMethod: selectedPayment,
-    });
+  const handleConfirm = async () => {
+    if (!isAuthenticated || !userId) {
+      Alert.alert('Lỗi', 'Vui lòng đăng nhập để đặt sân.');
+      navigation.navigate('Login');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const createBookingDto: CreateBookingDto = {
+        fieldId: bookingData.fieldId,
+        userId: userId,
+        bookingDate: bookingData.bookingDate,
+        slotIds: bookingData.slotIds,
+        serviceList: (selectedServices || []).map((s: any) => ({
+          serviceId: s.serviceId,
+          quantity: s.quantity
+        }))
+      };
+
+      const result = await bookingsApi.create(createBookingDto);
+
+      if (selectedPayment !== 'cash') {
+        // Generate mock payment URL for VNPay
+        const mockPaymentUrl = `https://sandbox.vnpayment.vn/paymentv2/vpcpay.html?vnp_Amount=${totalPrice * 100}&vnp_OrderInfo=Thanh_toan_booking_${result.bookingId}`;
+        navigation.navigate('Payment', {
+          paymentUrl: mockPaymentUrl,
+          bookingData,
+          totalPrice,
+          selectedPayment,
+          bookingCode: result.bookingId,
+        });
+      } else {
+        navigation.navigate('BookingSuccess', {
+          field: bookingData.field,
+          totalPrice,
+          paymentMethod: selectedPayment,
+          bookingCode: result.bookingId,
+        });
+      }
+    } catch (error: any) {
+      console.error('Failed to create booking', error);
+      
+      if (error.response && (error.response.status === 409 || error.response.status === 400)) {
+        Alert.alert(
+          'Lịch đã bị đặt',
+          'Rất tiếc, một số khung giờ bạn chọn vừa có người khác đặt. Vui lòng chọn lại.',
+          [{ 
+            text: 'Quay lại', 
+            onPress: () => navigation.navigate('SelectTime', { sportCenterId: bookingData.field?.sportCenterId }) 
+          }]
+        );
+      } else {
+        Alert.alert('Lỗi', 'Không thể đặt sân. Vui lòng thử lại sau.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} disabled={loading}>
           <Ionicons name="chevron-back" size={26} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Xác nhận đặt sân</Text>
@@ -77,24 +116,24 @@ const CheckoutScreen = ({ navigation, route }: { navigation: any; route: any }) 
             <Ionicons name="tennisball-outline" size={26} color="#22c55e" />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.fieldName}>{field.name}</Text>
+            <Text style={styles.fieldName}>{bookingData?.field?.name || 'Sân thể thao'}</Text>
             <View style={styles.fieldRow}>
               <Ionicons name="calendar-outline" size={13} color="#6b7280" />
-              <Text style={styles.fieldMeta}>{field.date}</Text>
+              <Text style={styles.fieldMeta}>{bookingData?.bookingDate}</Text>
             </View>
             <View style={styles.fieldRow}>
               <Ionicons name="time-outline" size={13} color="#6b7280" />
-              <Text style={styles.fieldMeta}>{field.time}</Text>
+              <Text style={styles.fieldMeta}>{bookingData?.slotIds?.length || 0} khung giờ</Text>
             </View>
           </View>
         </View>
 
         <Text style={styles.sectionTitle}>Dịch vụ đã chọn</Text>
-        {selectedServices.length === 0 ? (
+        {!selectedServices || selectedServices.length === 0 ? (
           <Text style={styles.emptyText}>Không có dịch vụ đi kèm</Text>
         ) : (
-          selectedServices.map((s) => (
-            <View key={s.id} style={styles.serviceRow}>
+          selectedServices.map((s: any) => (
+            <View key={s.serviceId} style={styles.serviceRow}>
               <Text style={styles.serviceRowName}>
                 {s.quantity} x {s.name}
               </Text>
@@ -147,7 +186,7 @@ const CheckoutScreen = ({ navigation, route }: { navigation: any; route: any }) 
 
         <View style={styles.summaryBox}>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Giá thuê sân (2h)</Text>
+            <Text style={styles.summaryLabel}>Giá thuê sân</Text>
             <Text style={styles.summaryValue}>{fieldPrice.toLocaleString('vi-VN')}đ</Text>
           </View>
           <View style={styles.summaryRow}>
@@ -169,9 +208,19 @@ const CheckoutScreen = ({ navigation, route }: { navigation: any; route: any }) 
           <Text style={styles.footerTotalLabel}>Tổng thanh toán</Text>
           <Text style={styles.footerTotalValue}>{totalPrice.toLocaleString('vi-VN')}đ</Text>
         </View>
-        <TouchableOpacity style={styles.confirmButton} onPress={handleConfirm}>
-          <Text style={styles.confirmButtonText}>Xác nhận đặt sân</Text>
-          <Ionicons name="arrow-forward" size={18} color="#fff" />
+        <TouchableOpacity 
+          style={[styles.confirmButton, loading && { opacity: 0.7 }]} 
+          onPress={handleConfirm}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Text style={styles.confirmButtonText}>Xác nhận đặt sân</Text>
+              <Ionicons name="arrow-forward" size={18} color="#fff" />
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>

@@ -26,7 +26,9 @@ namespace SportHub.Services.Implementations
                     Name = sc.Name,
                     Address = sc.Address,
                     Description = sc.Description,
-                    CreatedAt = sc.CreatedAt
+                    CreatedAt = sc.CreatedAt,
+                    images = sc.Images?.ToList(),
+                    MinPrice = sc.Fields != null && sc.Fields.Any() ? sc.Fields.Min(f => f.PricePerSlot) : 0
                 });
             }
             return result;
@@ -45,7 +47,8 @@ namespace SportHub.Services.Implementations
                 Name = sportCenter.Name,
                 Address = sportCenter.Address,
                 Description = sportCenter.Description,
-                CreatedAt = sportCenter.CreatedAt
+                CreatedAt = sportCenter.CreatedAt,
+                images = sportCenter.Images?.ToList()
             };
         }
 
@@ -64,7 +67,8 @@ namespace SportHub.Services.Implementations
                 Name = sportCenter.Name,
                 Address = sportCenter.Address,
                 Description = sportCenter.Description,
-                CreatedAt = sportCenter.CreatedAt
+                CreatedAt = sportCenter.CreatedAt,
+                images = sportCenter.Images?.ToList()
             };
         }
 
@@ -85,7 +89,8 @@ namespace SportHub.Services.Implementations
                 Name = sportCenter.Name,
                 Address = sportCenter.Address,
                 Description = sportCenter.Description,
-                CreatedAt = sportCenter.CreatedAt
+                CreatedAt = sportCenter.CreatedAt,
+                images = sportCenter.Images?.ToList()
             };
         }
 
@@ -111,7 +116,8 @@ namespace SportHub.Services.Implementations
                     Name = sport.Name,
                     Address = sport.Address,
                     Description= sport.Description,
-                    CreatedAt = sport.CreatedAt
+                    CreatedAt = sport.CreatedAt,
+                    images = sport.Images?.ToList()
                 });
             }
             return result;

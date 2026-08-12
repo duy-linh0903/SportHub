@@ -1,4 +1,4 @@
-﻿using SportHub.Models;
+using SportHub.Models;
 
 namespace SportHub.Repositories.Interfaces
 {
@@ -8,6 +8,7 @@ namespace SportHub.Repositories.Interfaces
         Task<Bookings?> GetByIdAsync(Guid id);
         Task<List<TimeSlots>> GetTimeSlotsByIdsAsync(List<Guid> ids);
         Task<bool> AnySlotConflictAsync(List<Guid> slotIds, Guid fieldId, DateOnly bookingDate);
+        Task<List<Guid>> GetBookedSlotIdsAsync(Guid fieldId, DateOnly bookingDate);
         Task AddAsync(Bookings addBooking);
         Task DeleteAsync(Guid id);
         Task<List<Bookings>> GetBySportCenterId(Guid centerId);

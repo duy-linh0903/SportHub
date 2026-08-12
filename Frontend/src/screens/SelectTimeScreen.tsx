@@ -1,44 +1,116 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
-
   ScrollView, 
-  TouchableOpacity 
+  TouchableOpacity,
+  ActivityIndicator
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// Dữ liệu giả lập
-const DATES = [
-  { day: 'T2', date: '5' },
-  { day: 'T3', date: '6' },
-  { day: 'T4', date: '7' },
-  { day: 'T5', date: '8' },
-  { day: 'T6', date: '9' },
-];
+import { RootStackParamList } from '../../App';
+import { fieldsApi } from '../api/fieldsApi';
+import { bookingsApi } from '../api/bookingsApi';
+import { FieldResponseDto, SportCenterResponseDto } from '../types/api';
+import { sportCentersApi } from '../api/sportCentersApi';
+import { format, addDays } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
-const COURTS = ['Sân 1', 'Sân 2', 'Sân 3', 'Sân 4'];
+type SelectTimeScreenRouteProp = RouteProp<RootStackParamList, 'SelectTime'>;
+type SelectTimeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'SelectTime'>;
 
-const TIME_SLOTS = [
-  { id: 1, time: '06:00 - 07:30', price: 120000, isBooked: false },
-  { id: 2, time: '07:30 - 09:00', price: 120000, isBooked: true },
-  { id: 3, time: '09:00 - 10:30', price: 120000, isBooked: false },
-  { id: 4, time: '15:00 - 16:30', price: 150000, isBooked: false },
-  { id: 5, time: '16:30 - 18:00', price: 180000, isBooked: false },
-  { id: 6, time: '18:00 - 19:30', price: 200000, isBooked: false },
-  { id: 7, time: '19:30 - 21:00', price: 200000, isBooked: false },
-  { id: 8, time: '21:00 - 22:30', price: 150000, isBooked: false },
-];
+type Props = {
+  route: SelectTimeScreenRouteProp;
+  navigation: SelectTimeScreenNavigationProp;
+};
 
-const SelectTimeScreen = ({ navigation }: { navigation: any }) => {
-  const [selectedDate, setSelectedDate] = useState('5');
-  const [selectedCourt, setSelectedCourt] = useState('Sân 1');
-  const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
+// Generate 14 dates from today
+const generateDates = () => {
+  return Array.from({ length: 14 }).map((_, index) => {
+    const date = addDays(new Date(), index);
+    return {
+      day: format(date, 'E', { locale: vi }),
+      date: format(date, 'd'),
+      fullDate: format(date, 'yyyy-MM-dd')
+    };
+  });
+};
+const DATES = generateDates();
+
+// Generate 14 time slots based on backend seed data (07:00 to 21:00)
+const TIME_SLOTS = Array.from({ length: 14 }).map((_, index) => {
+  const hex = (0x400 + index).toString(16).padStart(12, '0');
+  const id = `00000000-0000-0000-0000-${hex}`;
+  const start = 7 + index;
+  const end = 8 + index;
+  return {
+    id,
+    time: `${start.toString().padStart(2, '0')}:00 - ${end.toString().padStart(2, '0')}:00`,
+    start,
+    end
+  };
+});
+
+const SelectTimeScreen = ({ route, navigation }: Props) => {
+  const sportCenterId = route.params?.sportCenterId;
+  const [sportCenter, setSportCenter] = useState<SportCenterResponseDto | null>(null);
+  const [fields, setFields] = useState<FieldResponseDto[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [selectedDate, setSelectedDate] = useState(DATES[0]);
+  const [selectedField, setSelectedField] = useState<FieldResponseDto | null>(null);
+  const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
+  const [bookedSlots, setBookedSlots] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (sportCenterId) {
+      fetchFields();
+    }
+  }, [sportCenterId]);
+
+  useEffect(() => {
+    if (selectedField && selectedDate) {
+      fetchBookedSlots();
+    }
+  }, [selectedField, selectedDate]);
+
+  const fetchBookedSlots = async () => {
+    try {
+      if (!selectedField) return;
+      const slots = await bookingsApi.getBookedSlots(selectedField.fieldId, selectedDate.fullDate);
+      setBookedSlots(slots);
+      
+      // If any selected slot is now booked, remove it from selection
+      setSelectedSlots(prev => prev.filter(id => !slots.includes(id)));
+    } catch (error) {
+      console.error('Failed to fetch booked slots:', error);
+    }
+  };
+
+  const fetchFields = async () => {
+    setLoading(true);
+    try {
+      if (sportCenterId) {
+        const centerData = await sportCentersApi.getById(sportCenterId);
+        setSportCenter(centerData);
+      }
+      const data = await fieldsApi.getBySportCenter(sportCenterId!);
+      setFields(data);
+      if (data.length > 0) {
+        setSelectedField(data[0]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Xử lý chọn/bỏ chọn khung giờ
-  const toggleSlot = (id: number) => {
+  const toggleSlot = (id: string) => {
     if (selectedSlots.includes(id)) {
       setSelectedSlots(selectedSlots.filter(slotId => slotId !== id));
     } else {
@@ -47,19 +119,33 @@ const SelectTimeScreen = ({ navigation }: { navigation: any }) => {
   };
 
   // Tính tổng tiền
-  const totalPrice = selectedSlots.reduce((total, slotId) => {
-    const slot = TIME_SLOTS.find(t => t.id === slotId);
-    return total + (slot ? slot.price : 0);
+  const totalPrice = selectedSlots.reduce((total, _) => {
+    return total + (selectedField ? selectedField.pricePerSlot : 0);
   }, 0);
-return (
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#006e2f" />
+      </SafeAreaView>
+    );
+  }
+
+  return (
     <SafeAreaView style={styles.container}>
       {/* 1. Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chọn lịch đặt sân</Text>
-        <View style={{ width: 24 }} />
+        <Text style={styles.headerTitle}>{sportCenter?.name || route.params?.sportCenterName || 'Đặt sân'}</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      {/* Thông tin sân */}
+      <View style={styles.venueInfo}>
+        <Text style={styles.venueName}>{sportCenter?.name || route.params?.sportCenterName || 'Tên sân'}</Text>
+        <Text style={styles.venueAddress}>{sportCenter?.address || route.params?.sportCenterAddress || 'Địa chỉ sân'}</Text>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
@@ -67,17 +153,20 @@ return (
         {/* 2. Chọn Ngày */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Tháng 11</Text>
+            <Text style={styles.sectionTitle}>Chọn ngày thi đấu</Text>
             <Ionicons name="calendar-outline" size={20} color="#22c55e" />
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dateScroll}>
             {DATES.map((item, index) => {
-              const isSelected = selectedDate === item.date;
+              const isSelected = selectedDate.fullDate === item.fullDate;
               return (
                 <TouchableOpacity 
                   key={index} 
                   style={[styles.dateItem, isSelected && styles.dateItemSelected]}
-                  onPress={() => setSelectedDate(item.date)}
+                  onPress={() => {
+                    setSelectedDate(item);
+                    setSelectedSlots([]); // Reset slots on date change
+                  }}
                 >
                   <Text style={[styles.dayText, isSelected && styles.textWhite]}>{item.day}</Text>
                   <Text style={[styles.dateText, isSelected && styles.textWhite]}>{item.date}</Text>
@@ -91,15 +180,18 @@ return (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Chọn khu vực thi đấu</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.courtScroll}>
-            {COURTS.map((court, index) => {
-              const isSelected = selectedCourt === court;
+            {fields.map((field) => {
+              const isSelected = selectedField?.fieldId === field.fieldId;
               return (
                 <TouchableOpacity 
-                  key={index}
+                  key={field.fieldId}
                   style={[styles.courtItem, isSelected && styles.courtItemSelected]}
-                  onPress={() => setSelectedCourt(court)}
+                  onPress={() => {
+                    setSelectedField(field);
+                    setSelectedSlots([]); // Reset slots on field change
+                  }}
                 >
-                  <Text style={[styles.courtText, isSelected && styles.textWhite]}>{court}</Text>
+                  <Text style={[styles.courtText, isSelected && styles.textWhite]}>{field.name}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -119,22 +211,30 @@ return (
           <View style={styles.slotsGrid}>
             {TIME_SLOTS.map((slot) => {
               const isSelected = selectedSlots.includes(slot.id);
+              const isBookedOriginal = bookedSlots.includes(slot.id); 
+              
+              const isToday = selectedDate.fullDate === format(new Date(), 'yyyy-MM-dd');
+              const currentHour = new Date().getHours();
+              const isPast = isToday && slot.start <= currentHour;
+              
+              const isDisabled = isBookedOriginal || isPast;
+
               return (
                 <TouchableOpacity
                   key={slot.id}
-                  disabled={slot.isBooked}
+                  disabled={isDisabled}
                   style={[
                     styles.slotItem,
                     isSelected && styles.slotItemSelected,
-                    slot.isBooked && styles.slotItemBooked
+                    isDisabled && styles.slotItemBooked
                   ]}
                   onPress={() => toggleSlot(slot.id)}
                 >
-                  <Text style={[styles.slotTime, isSelected && styles.textWhite, slot.isBooked && styles.textDisabled]}>
+                  <Text style={[styles.slotTime, isSelected && styles.textWhite, isDisabled && styles.textDisabled]}>
                     {slot.time}
                   </Text>
-                  <Text style={[styles.slotPrice, isSelected && styles.textWhite, slot.isBooked && styles.textDisabled]}>
-                    {slot.isBooked ? 'Đã đặt' : `${slot.price.toLocaleString('vi-VN')}đ`}
+                  <Text style={[styles.slotPrice, isSelected && styles.textWhite, isDisabled && styles.textDisabled]}>
+                    {isDisabled ? (isPast ? 'Đã qua' : 'Đã đặt') : `${selectedField ? selectedField.pricePerSlot.toLocaleString('vi-VN') : 0}đ`}
                   </Text>
                 </TouchableOpacity>
               );
@@ -153,7 +253,32 @@ return (
         <TouchableOpacity 
           style={[styles.continueButton, selectedSlots.length === 0 && styles.buttonDisabled]}
           disabled={selectedSlots.length === 0}
-          onPress={() => navigation.navigate('AddonServiceScreen')}
+          onPress={() => {
+            const selectedTimeSlots = TIME_SLOTS.filter(s => selectedSlots.includes(s.id));
+            let timeString = '';
+            if (selectedTimeSlots.length > 0) {
+              const start = Math.min(...selectedTimeSlots.map(s => s.start));
+              const end = Math.max(...selectedTimeSlots.map(s => s.end));
+              timeString = `${start.toString().padStart(2, '0')}:00 - ${end.toString().padStart(2, '0')}:00`;
+            }
+            
+            navigation.navigate('Addon', { 
+              bookingData: {
+                sportCenterId,
+                fieldId: selectedField?.fieldId,
+                field: {
+                  ...selectedField,
+                  address: sportCenter?.address || route.params?.sportCenterAddress,
+                  name: selectedField?.name || sportCenter?.name || route.params?.sportCenterName,
+                  time: timeString,
+                  date: selectedDate.fullDate
+                },
+                bookingDate: selectedDate.fullDate,
+                slotIds: selectedSlots,
+                totalPrice
+              }
+            });
+          }}
         >
           <Text style={styles.continueButtonText}>Tiếp tục</Text>
         </TouchableOpacity>
@@ -175,11 +300,14 @@ const styles = StyleSheet.create({
   },
   backButton: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
+  venueInfo: { paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#f2f4f6' },
+  venueName: { fontSize: 20, fontWeight: 'bold', color: '#191c1e', marginBottom: 4 },
+  venueAddress: { fontSize: 14, color: '#666' },
   scrollContent: { paddingBottom: 100 },
   section: { paddingVertical: 20, borderBottomWidth: 8, borderBottomColor: '#f2f4f6' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 16 },
   sectionTitle: { fontSize: 16, fontWeight: 'bold', color: '#1a1a1a', paddingHorizontal: 20 },
-  dateScroll: { paddingHorizontal: 20, gap: 12 },
+  dateScroll: { paddingHorizontal: 20, gap: 12, flexDirection: 'row' },
   dateItem: {
     width: 60,
     height: 72,
@@ -194,7 +322,7 @@ const styles = StyleSheet.create({
   dayText: { fontSize: 13, color: '#666', marginBottom: 4 },
   dateText: { fontSize: 20, fontWeight: 'bold', color: '#1a1a1a' },
   textWhite: { color: '#ffffff' },
-  courtScroll: { paddingHorizontal: 20, gap: 12, marginTop: 16 },
+  courtScroll: { paddingHorizontal: 20, gap: 12, flexDirection: 'row', marginTop: 16 },
   courtItem: {
     paddingHorizontal: 24,
     paddingVertical: 12,

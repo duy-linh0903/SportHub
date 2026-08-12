@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SportHub.Models
@@ -31,6 +31,7 @@ namespace SportHub.Models
         public BookingStatus Status { get; set; }
         public string? CheckInCode { get; set; }
         public DateTime CreatedAt { get; set; }
+        public virtual ICollection<BookingSlots> BookingSlots { get; set; } = new List<BookingSlots>();
         public Bookings()
         {
             Id = Guid.NewGuid();

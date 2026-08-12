@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -11,47 +11,6 @@ interface Review {
   date: string;
   comment: string;
 }
-
-const DUMMY_REVIEWS: Review[] = [
-  {
-    id: 'RV01',
-    userName: 'Nguyễn Văn An',
-    rating: 5,
-    date: '20 Thg 10, 2023',
-    comment: 'Sân đẹp, ánh sáng tốt, nhân viên hỗ trợ nhiệt tình. Chắc chắn sẽ quay lại.',
-  },
-  {
-    id: 'RV02',
-    userName: 'Trần Thị Bình',
-    rating: 4,
-    date: '15 Thg 10, 2023',
-    comment: 'Sân ổn, giá hợp lý. Bãi giữ xe hơi nhỏ vào giờ cao điểm.',
-  },
-  {
-    id: 'RV03',
-    userName: 'Lê Hoàng Cường',
-    rating: 5,
-    date: '02 Thg 10, 2023',
-    comment: 'Mặt sân mới, chơi rất thích. Có dịch vụ thuê trọng tài khá tiện.',
-  },
-  {
-    id: 'RV04',
-    userName: 'Phạm Thu Hà',
-    rating: 3,
-    date: '28 Thg 9, 2023',
-    comment: 'Bình thường, phòng thay đồ hơi chật.',
-  },
-];
-
-const AVERAGE_RATING = 4.5;
-const TOTAL_REVIEWS = 124;
-const RATING_BREAKDOWN = [
-  { star: 5, percent: 0.68 },
-  { star: 4, percent: 0.2 },
-  { star: 3, percent: 0.08 },
-  { star: 2, percent: 0.03 },
-  { star: 1, percent: 0.01 },
-];
 
 const Stars = ({ rating, size = 13 }: { rating: number; size?: number }) => (
   <View style={{ flexDirection: 'row' }}>
@@ -68,7 +27,48 @@ const Stars = ({ rating, size = 13 }: { rating: number; size?: number }) => (
 );
 
 const ReviewListScreen = ({ navigation, route }: { navigation: any; route: any }) => {
-  const fieldName = route?.params?.fieldName || 'Sân Cầu Lông SportHub A1';
+  const fieldName = route?.params?.fieldName || 'Sân chưa xác định';
+  const sportCenterId = route?.params?.sportCenterId;
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  React.useEffect(() => {
+    if (sportCenterId) {
+      fetchReviews();
+    } else {
+      setLoading(false);
+    }
+  }, [sportCenterId]);
+
+  const fetchReviews = async () => {
+    setLoading(true);
+    try {
+      const { reviewsApi } = await import('../api/reviewsApi');
+      const data = await reviewsApi.getBySportCenter(sportCenterId);
+      setReviews(data);
+    } catch (error) {
+      console.error('Error fetching reviews', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const totalReviews = reviews.length;
+  const averageRating = totalReviews > 0 
+    ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / totalReviews 
+    : 0;
+
+  const ratingCounts = [0, 0, 0, 0, 0];
+  reviews.forEach((r: any) => {
+    if (r.rating >= 1 && r.rating <= 5) {
+      ratingCounts[r.rating - 1]++;
+    }
+  });
+
+  const ratingBreakdown = [5, 4, 3, 2, 1].map(star => ({
+    star,
+    percent: totalReviews > 0 ? ratingCounts[star - 1] / totalReviews : 0
+  }));
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -83,25 +83,23 @@ const ReviewListScreen = ({ navigation, route }: { navigation: any; route: any }
       </View>
 
       <FlatList
-        data={DUMMY_REVIEWS}
-        keyExtractor={(item) => item.id}
+        data={reviews}
+        keyExtractor={(item, index) => `${item.userId}-${index}`}
         contentContainerStyle={styles.listContent}
         ListHeaderComponent={
           <View style={styles.summaryBox}>
             <View style={styles.summaryLeft}>
-              <Text style={styles.averageValue}>{AVERAGE_RATING}</Text>
-              <Stars rating={Math.round(AVERAGE_RATING)} size={14} />
-              <Text style={styles.totalText}>{TOTAL_REVIEWS} đánh giá</Text>
+              <Text style={styles.averageValue}>{averageRating.toFixed(1)}</Text>
+              <Stars rating={Math.round(averageRating)} size={14} />
+              <Text style={styles.totalText}>{totalReviews} đánh giá</Text>
             </View>
             <View style={styles.summaryRight}>
-              {RATING_BREAKDOWN.map((r) => (
+              {ratingBreakdown.map((r) => (
                 <View key={r.star} style={styles.breakdownRow}>
                   <Text style={styles.breakdownStar}>{r.star}</Text>
                   <Ionicons name="star" size={10} color="#f59e0b" />
                   <View style={styles.breakdownBarBg}>
-                    <View
-                      style={[styles.breakdownBarFill, { width: `${r.percent * 100}%` }]}
-                    />
+                    <View style={[styles.breakdownBarFill, { width: `${r.percent * 100}%` }]} />
                   </View>
                 </View>
               ))}
@@ -112,25 +110,28 @@ const ReviewListScreen = ({ navigation, route }: { navigation: any; route: any }
           <View style={styles.reviewCard}>
             <View style={styles.reviewHeader}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{item.userName.charAt(0)}</Text>
+                <Ionicons name="person" size={18} color="#fff" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.userName}>{item.userName}</Text>
+                <Text style={styles.userName}>Khách hàng</Text>
                 <View style={styles.reviewMeta}>
                   <Stars rating={item.rating} />
-                  <Text style={styles.reviewDate}>{item.date}</Text>
+                  <Text style={styles.reviewDate}>N/A</Text>
                 </View>
               </View>
             </View>
             <Text style={styles.reviewComment}>{item.comment}</Text>
           </View>
         )}
+        ListEmptyComponent={
+          !loading ? <Text style={{ textAlign: 'center', marginTop: 40, color: '#666' }}>Chưa có đánh giá nào.</Text> : null
+        }
       />
 
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.writeButton}
-          onPress={() => navigation.navigate('WriteReview', { field: { name: fieldName } })}
+          onPress={() => navigation.navigate('WriteReview', { field: { name: fieldName, sportCenterId } })}
         >
           <Ionicons name="create-outline" size={18} color="#fff" />
           <Text style={styles.writeButtonText}>Viết đánh giá</Text>

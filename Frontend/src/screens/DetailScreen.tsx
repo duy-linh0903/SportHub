@@ -1,19 +1,89 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
-  
   ScrollView, 
   TouchableOpacity,
-  StatusBar
+  StatusBar,
+  ActivityIndicator,
+  Image
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from '../../App';
+import { sportCentersApi } from '../api/sportCentersApi';
+import { fieldsApi } from '../api/fieldsApi';
+import { reviewsApi } from '../api/reviewsApi';
+import { SportCenterResponseDto, FieldResponseDto } from '../types/api';
 
-// Tạm thời dùng any, sau này bạn sẽ khai báo kiểu trong RootStackParamList
-const DetailScreen = ({ navigation }: { navigation: any }) => {
+type DetailScreenRouteProp = RouteProp<RootStackParamList, 'Detail'>;
+type DetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Detail'>;
+
+type Props = {
+  route: DetailScreenRouteProp;
+  navigation: DetailScreenNavigationProp;
+};
+
+const DetailScreen = ({ route, navigation }: Props) => {
+  const sportCenterId = route.params?.sportCenterId;
+  const [sportCenter, setSportCenter] = useState<SportCenterResponseDto | null>(null);
+  const [fields, setFields] = useState<FieldResponseDto[]>([]);
+  const [ratingInfo, setRatingInfo] = useState({ avg: 0, count: 0 });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (sportCenterId) {
+      fetchData();
+    }
+  }, [sportCenterId]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const centerData = await sportCentersApi.getById(sportCenterId!);
+      setSportCenter(centerData);
+      
+      const fieldsData = await fieldsApi.getBySportCenter(sportCenterId!);
+      setFields(fieldsData);
+      
+      const reviews = await reviewsApi.getBySportCenter(sportCenterId!);
+      const count = reviews.length;
+      const avg = count > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / count : 0;
+      setRatingInfo({ avg, count });
+    } catch (error) {
+      console.error('Failed to fetch detail', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#006e2f" />
+      </SafeAreaView>
+    );
+  }
+
+  if (!sportCenter) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text>Không tìm thấy thông tin sân.</Text>
+        <TouchableOpacity style={{ marginTop: 20 }} onPress={() => navigation.goBack()}>
+          <Text style={{ color: '#006e2f' }}>Quay lại</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
+  // Calculate min price
+  const minPrice = fields.length > 0 
+    ? Math.min(...fields.map(f => f.pricePerSlot))
+    : 0;
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
@@ -23,7 +93,11 @@ const DetailScreen = ({ navigation }: { navigation: any }) => {
         {/* 1. Phần Hình ảnh Cover & Nút Back */}
         <View style={styles.imageContainer}>
           <View style={styles.imagePlaceholder}>
-            <Text style={styles.imageText}>Ảnh sân bóng chất lượng cao</Text>
+            {sportCenter.images && sportCenter.images.length > 0 && sportCenter.images[0].url ? (
+              <Image source={{ uri: sportCenter.images[0].url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+            ) : (
+              <Text style={styles.imageText}>Ảnh {sportCenter.name}</Text>
+            )}
           </View>
           
           <View style={styles.headerButtons}>
@@ -49,21 +123,25 @@ const DetailScreen = ({ navigation }: { navigation: any }) => {
             </View>
             <TouchableOpacity
               style={styles.ratingBox}
-              onPress={() => navigation.navigate('ReviewList', { fieldName: 'Sân bóng đá Đại học Bách Khoa' })}
+              onPress={() => navigation.navigate('ReviewList', { fieldName: sportCenter.name, sportCenterId: sportCenter.sportCenterId })}
             >
               <Ionicons name="star" size={14} color="#F97316" />
-              <Text style={styles.ratingText}>4.8 <Text style={styles.reviewCount}>(120+ đánh giá)</Text></Text>
+              <Text style={styles.ratingText}>
+                {ratingInfo.avg > 0 ? ratingInfo.avg.toFixed(1) : 'Chưa có'} 
+                <Text style={styles.reviewCount}>
+                  {ratingInfo.count > 0 ? ` (${ratingInfo.count} đánh giá)` : ''}
+                </Text>
+              </Text>
               <Ionicons name="chevron-forward" size={14} color="#666" />
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.venueName}>Sân bóng đá Đại học Bách Khoa</Text>
+          <Text style={styles.venueName}>{sportCenter.name}</Text>
           
           <View style={styles.addressRow}>
             <Ionicons name="location-outline" size={16} color="#666" />
-            <Text style={styles.addressText}>Số 1 Đại Cồ Việt, Bách Khoa, Hai Bà Trưng, Hà Nội</Text>
+            <Text style={styles.addressText}>{sportCenter.address}</Text>
           </View>
-          <Text style={styles.distanceText}>📍 Cách bạn khoảng 2.5km</Text>
         </View>
 
         {/* 3. Tiện ích sân (Amenities) */}
@@ -101,11 +179,8 @@ const DetailScreen = ({ navigation }: { navigation: any }) => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Mô tả chi tiết</Text>
           <Text style={styles.descriptionText}>
-            Sân bóng đá Bách Khoa sở hữu hệ thống cỏ nhân tạo đạt chuẩn FIFA 2 sao, hệ thống đèn chiếu sáng hiện đại phục vụ các trận đấu đêm. Không gian thoáng đãng, cơ sở hạ tầng được bảo trì định kỳ, mang lại trải nghiệm thi đấu chuyên nghiệp nhất.
+            {sportCenter.description || 'Chưa có mô tả chi tiết.'}
           </Text>
-          <TouchableOpacity>
-            <Text style={styles.readMoreText}>Đọc thêm</Text>
-          </TouchableOpacity>
         </View>
 
         {/* 5. Đánh giá */}
@@ -113,7 +188,7 @@ const DetailScreen = ({ navigation }: { navigation: any }) => {
           <View style={styles.reviewSectionHeader}>
             <Text style={styles.sectionTitle}>Đánh giá từ khách hàng</Text>
             <TouchableOpacity
-              onPress={() => navigation.navigate('ReviewList', { fieldName: 'Sân bóng đá Đại học Bách Khoa' })}
+              onPress={() => navigation.navigate('ReviewList', { fieldName: sportCenter.name, sportCenterId: sportCenter.sportCenterId })}
             >
               <Text style={styles.seeAllText}>Xem tất cả</Text>
             </TouchableOpacity>
@@ -121,7 +196,7 @@ const DetailScreen = ({ navigation }: { navigation: any }) => {
 
           <TouchableOpacity
             style={styles.writeReviewButton}
-            onPress={() => navigation.navigate('WriteReview', { field: { name: 'Sân bóng đá Đại học Bách Khoa' } })}
+            onPress={() => navigation.navigate('WriteReview', { field: { name: sportCenter.name, sportCenterId: sportCenter.sportCenterId } })}
           >
             <Ionicons name="create-outline" size={18} color="#22c55e" />
             <Text style={styles.writeReviewText}>Viết đánh giá của bạn</Text>
@@ -134,9 +209,9 @@ const DetailScreen = ({ navigation }: { navigation: any }) => {
       <View style={styles.bottomBar}>
         <View style={styles.priceContainer}>
           <Text style={styles.priceLabel}>Giá thuê từ</Text>
-          <Text style={styles.priceValue}>350.000đ<Text style={styles.priceUnit}>/giờ</Text></Text>
+          <Text style={styles.priceValue}>{minPrice > 0 ? minPrice.toLocaleString('vi-VN') : '---'}đ<Text style={styles.priceUnit}>/giờ</Text></Text>
         </View>
-        <TouchableOpacity style={styles.bookButton} onPress={() => navigation.navigate('SelectTime')}>
+        <TouchableOpacity style={styles.bookButton} onPress={() => { if (sportCenterId) navigation.navigate('SelectTime', { sportCenterId, sportCenterAddress: sportCenter?.address, sportCenterName: sportCenter?.name }) }}>
           <Text style={styles.bookButtonText}>Đặt sân ngay</Text>
           <Ionicons name="arrow-forward" size={20} color="#fff" />
         </TouchableOpacity>

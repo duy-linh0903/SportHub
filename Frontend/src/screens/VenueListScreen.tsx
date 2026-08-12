@@ -1,75 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   StyleSheet, 
-
   FlatList, 
   TouchableOpacity,
-  TextInput
+  ActivityIndicator,
+  Image
 } from 'react-native';
 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { sportCentersApi } from '../api/sportCentersApi';
+import { SportCenterResponseDto } from '../types/api';
 
-// Dữ liệu giả lập
+// Categories can be kept static or fetched from somewhere else if needed
 const CATEGORIES = ['Tất cả', 'Bóng đá', 'Cầu lông', 'Bóng rổ', 'Tennis'];
 
-const VENUES = [
-  {
-    id: '1',
-    name: 'Sân bóng Đại Thế Giới',
-    address: '105 Trần Hưng Đạo, Quận 5',
-    distance: '2.5km',
-    price: 250000,
-    rating: 4.8,
-    reviews: 120,
-    type: 'Bóng đá',
-    isAvailable: true,
-  },
-  {
-    id: '2',
-    name: 'CLB Cầu Lông Tân Sơn',
-    address: '68/41 CMT8, Quận Tân Bình',
-    distance: '4.2km',
-    price: 120000,
-    rating: 4.5,
-    reviews: 85,
-    type: 'Cầu lông',
-    isAvailable: true,
-  },
-  {
-    id: '3',
-    name: 'Basketball Zone Q.7',
-    address: 'Khu dân cư Him Lam, Quận 7',
-    distance: '5.1km',
-    price: 350000,
-    rating: 4.9,
-    reviews: 200,
-    type: 'Bóng rổ',
-    isAvailable: false,
-  },
-];
-
 const VenueListScreen = ({ navigation }: { navigation: any }) => {
-  const [activeCategory, setActiveCategory] = useState('Bóng đá');
+  const [activeCategory, setActiveCategory] = useState('Tất cả');
+  const [sportCenters, setSportCenters] = useState<SportCenterResponseDto[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const renderVenueCard = ({ item }: { item: typeof VENUES[0] }) => (
+  useEffect(() => {
+    fetchSportCenters();
+  }, []);
+
+  const fetchSportCenters = async () => {
+    setLoading(true);
+    try {
+      const data = await sportCentersApi.getAll();
+      setSportCenters(data);
+    } catch (error) {
+      console.error('Failed to fetch sport centers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderVenueCard = ({ item }: { item: SportCenterResponseDto }) => (
     <TouchableOpacity 
       style={styles.card} 
       activeOpacity={0.9}
-      onPress={() => navigation.navigate('Detail')}
+      onPress={() => navigation.navigate('Detail', { sportCenterId: item.sportCenterId })}
     >
-      <View style={[styles.imagePlaceholder, item.type === 'Cầu lông' && { backgroundColor: '#3755c3' }]}>
+      <View style={[styles.imagePlaceholder]}>
+        {item.images && item.images.length > 0 && item.images[0].url && (
+          <Image 
+            source={{ uri: item.images[0].url }} 
+            style={StyleSheet.absoluteFill} 
+            resizeMode="cover" 
+          />
+        )}
         <View style={styles.badgeContainer}>
-          <View style={[styles.statusBadge, !item.isAvailable && styles.statusBadgeFull]}>
-            <Text style={[styles.statusText, !item.isAvailable && styles.statusTextFull]}>
-              {item.isAvailable ? 'Còn sân' : 'Hết chỗ'}
+          <View style={[styles.statusBadge]}>
+            <Text style={[styles.statusText]}>
+              Còn sân
             </Text>
           </View>
           <View style={styles.ratingBadge}>
             <Ionicons name="star" size={12} color="#F97316" />
-            <Text style={styles.ratingText}>{item.rating} <Text style={styles.reviewText}>({item.reviews} đánh giá)</Text></Text>
+            <Text style={styles.ratingText}>4.5 <Text style={styles.reviewText}>(100 đánh giá)</Text></Text>
           </View>
         </View>
       </View>
@@ -77,7 +68,7 @@ const VenueListScreen = ({ navigation }: { navigation: any }) => {
       <View style={styles.cardInfo}>
         <View style={styles.cardHeader}>
           <Text style={styles.venueName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.venuePrice}>{item.price.toLocaleString('vi-VN')}đ<Text style={styles.priceUnit}>/giờ</Text></Text>
+          <Text style={styles.venuePrice}>{item.minPrice ? `${item.minPrice.toLocaleString('vi-VN')}đ` : 'Đang cập nhật'}<Text style={styles.priceUnit}>{item.minPrice ? '/giờ' : ''}</Text></Text>
         </View>
         
         <View style={styles.addressRow}>
@@ -91,7 +82,7 @@ const VenueListScreen = ({ navigation }: { navigation: any }) => {
             <Ionicons name="wifi-outline" size={16} color="#1E40AF" style={styles.amenityIcon} />
             <Ionicons name="cafe-outline" size={16} color="#1E40AF" style={styles.amenityIcon} />
           </View>
-          <TouchableOpacity style={styles.bookButton} onPress={() => navigation.navigate('Detail')}>
+          <TouchableOpacity style={styles.bookButton} onPress={() => navigation.navigate('Detail', { sportCenterId: item.sportCenterId })}>
             <Text style={styles.bookButtonText}>Đặt ngay</Text>
           </TouchableOpacity>
         </View>
@@ -140,13 +131,20 @@ const VenueListScreen = ({ navigation }: { navigation: any }) => {
       </View>
 
       {/* 3. Danh sách Sân */}
-      <FlatList
-        data={VENUES}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        renderItem={renderVenueCard}
-      />
+      {loading ? (
+        <ActivityIndicator size="large" color="#006e2f" style={{ marginTop: 50 }} />
+      ) : (
+        <FlatList
+          data={sportCenters}
+          keyExtractor={(item) => item.sportCenterId}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          renderItem={renderVenueCard}
+          ListEmptyComponent={() => (
+            <Text style={{ textAlign: 'center', marginTop: 20, color: '#666' }}>Không có sân nào.</Text>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 };

@@ -6,9 +6,16 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Image,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { uploadApi } from '../api/uploadApi';
+import { sportCentersApi } from '../api/sportCentersApi';
+import { fieldsApi } from '../api/fieldsApi';
 
 const FIELD_TYPES = ['Bóng đá', 'Cầu lông', 'Tennis', 'Bóng rổ'];
 
@@ -19,19 +26,78 @@ const AdminEditFieldScreen = ({ navigation, route }: { navigation: any; route: a
   const [name, setName] = useState(existingField?.name || '');
   const [fieldType, setFieldType] = useState(FIELD_TYPES[0]);
   const [address, setAddress] = useState(existingField?.address || '');
-  const [description, setDescription] = useState('');
+  const [description, setDescription] = useState(existingField?.description || '');
   const [price, setPrice] = useState(existingField?.price?.replace(/\D/g, '') || '');
+  const [imageUri, setImageUri] = useState<string | null>(existingField?.imageUrl || null);
+  const [loading, setLoading] = useState(false);
 
   const canSubmit = name.trim().length > 0 && address.trim().length > 0 && price.trim().length > 0;
 
-  const handleSave = () => {
-    navigation.goBack();
+  const handlePickImage = async () => {
+    const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.8 });
+    if (result.assets && result.assets.length > 0) {
+      setImageUri(result.assets[0].uri || null);
+    }
+  };
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      let uploadedUrl = imageUri;
+      // Nếu là ảnh mới chọn từ thiết bị (không phải http)
+      if (imageUri && !imageUri.startsWith('http')) {
+        const file = {
+          uri: imageUri,
+          name: `field_${Date.now()}.jpg`,
+          type: 'image/jpeg',
+        };
+        const uploadRes = await uploadApi.uploadFile(file);
+        uploadedUrl = uploadRes.url;
+      }
+
+      if (isEditing) {
+        // Cập nhật SportCenter
+        await sportCentersApi.update(existingField.id, {
+          name,
+          address,
+          description,
+        });
+        Alert.alert('Thành công', 'Đã cập nhật thông tin sân.', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      } else {
+        // Tạo SportCenter mới
+        const sc = await sportCentersApi.create({
+          name,
+          address,
+          description,
+          images: uploadedUrl ? [{ url: uploadedUrl }] : [],
+        } as any);
+
+        // Tạo Field
+        await fieldsApi.create({
+          sportCenterId: sc.sportCenterId,
+          name: name,
+          type: fieldType,
+          pricePerSlot: parseFloat(price),
+        });
+
+        Alert.alert('Thành công', 'Đã thêm sân mới.', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
+      }
+    } catch (error) {
+      console.error('Save field error:', error);
+      Alert.alert('Lỗi', 'Không thể lưu thông tin. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} disabled={loading}>
           <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{isEditing ? 'Chỉnh sửa thông tin sân' : 'Thêm sân mới'}</Text>
@@ -89,10 +155,16 @@ const AdminEditFieldScreen = ({ navigation, route }: { navigation: any; route: a
 
         <Text style={styles.sectionTitle}>Hình ảnh sân</Text>
         <View style={styles.imageRow}>
-          <TouchableOpacity style={styles.addImageBox}>
-            <Ionicons name="camera-outline" size={22} color="#666" />
-            <Text style={styles.addImageText}>Thêm ảnh</Text>
-          </TouchableOpacity>
+          {imageUri ? (
+            <TouchableOpacity onPress={handlePickImage}>
+              <Image source={{ uri: imageUri.startsWith('http') ? imageUri : `http://10.0.2.2:5115${imageUri}` }} style={styles.previewImage} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.addImageBox} onPress={handlePickImage}>
+              <Ionicons name="camera-outline" size={22} color="#666" />
+              <Text style={styles.addImageText}>Thêm ảnh</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <Text style={styles.sectionTitle}>Giá thuê</Text>
@@ -110,12 +182,18 @@ const AdminEditFieldScreen = ({ navigation, route }: { navigation: any; route: a
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, !canSubmit && styles.saveButtonDisabled]}
-          disabled={!canSubmit}
+          style={[styles.saveButton, (!canSubmit || loading) && styles.saveButtonDisabled]}
+          disabled={!canSubmit || loading}
           onPress={handleSave}
         >
-          <Ionicons name="save-outline" size={18} color="#fff" />
-          <Text style={styles.saveButtonText}>{isEditing ? 'Lưu thay đổi' : 'Thêm sân'}</Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="save-outline" size={18} color="#fff" />
+              <Text style={styles.saveButtonText}>{isEditing ? 'Lưu thay đổi' : 'Thêm sân'}</Text>
+            </>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -172,6 +250,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   addImageText: { fontSize: 10, color: '#666' },
+  previewImage: { width: 80, height: 80, borderRadius: 12 },
   priceInputWrap: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -6,28 +6,85 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Alert,
+  ActivityIndicator,
+  Modal,
+  FlatList
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { usersApi } from '../api/usersApi';
+import { useAuthStore } from '../store/useAuthStore';
+import { useThemeStore } from '../store/useThemeStore';
+import { UpdateProfileDto } from '../types/api';
 
 const EditProfileScreen = ({ navigation, route }: { navigation: any; route: any }) => {
-  const [fullName, setFullName] = useState(route?.params?.fullName || 'Nguyễn Văn An');
-  const [phone, setPhone] = useState(route?.params?.phone || '0901 234 567');
-  const [email, setEmail] = useState(route?.params?.email || 'an.nguyen@example.com');
-  const [area, setArea] = useState(route?.params?.area || 'Quận 7, TP. Hồ Chí Minh');
+  const profile = route?.params?.profile;
+  const { userId } = useAuthStore();
+  
+  const [fullName, setFullName] = useState(profile?.name || '');
+  const [phone, setPhone] = useState(profile?.phoneNumber || '');
+  const [email, setEmail] = useState(profile?.email || '');
+  const [area, setArea] = useState('Quận 7, TP. Hồ Chí Minh');
   const [publicProfile, setPublicProfile] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [areaModalVisible, setAreaModalVisible] = useState(false);
+  const { isDarkMode } = useThemeStore();
 
-  const handleSave = () => {
-    navigation.goBack();
+  const areas = [
+    'Quận 1, TP. Hồ Chí Minh',
+    'Quận 2, TP. Hồ Chí Minh',
+    'Quận 3, TP. Hồ Chí Minh',
+    'Quận 4, TP. Hồ Chí Minh',
+    'Quận 5, TP. Hồ Chí Minh',
+    'Quận 7, TP. Hồ Chí Minh',
+    'Quận 10, TP. Hồ Chí Minh',
+    'Tân Bình, TP. Hồ Chí Minh',
+    'Phú Nhuận, TP. Hồ Chí Minh',
+    'Bình Thạnh, TP. Hồ Chí Minh'
+  ];
+
+  const bgColor = isDarkMode ? '#121212' : '#fff';
+  const headerColor = isDarkMode ? '#1e1e1e' : '#fff';
+  const textColor = isDarkMode ? '#fff' : '#1a1a1a';
+  const subTextColor = isDarkMode ? '#a1a1aa' : '#666';
+  const inputBgColor = isDarkMode ? '#2c2c2e' : '#f2f4f6';
+  const borderColor = isDarkMode ? '#2c2c2e' : '#f2f4f6';
+
+  const handleSave = async () => {
+    if (!userId) {
+      Alert.alert('Lỗi', 'Vui lòng đăng nhập để lưu thay đổi.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const dto: UpdateProfileDto = {
+        name: fullName,
+        phoneNumber: phone,
+        email: email,
+        // Avatar URL omitted for now
+      };
+
+      await usersApi.update(userId, dto);
+      Alert.alert('Thành công', 'Thông tin của bạn đã được cập nhật.', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (error) {
+      console.error('Update profile error', error);
+      Alert.alert('Lỗi', 'Không thể cập nhật hồ sơ.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+      <View style={[styles.header, { backgroundColor: headerColor, borderBottomColor: borderColor }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} disabled={loading}>
+          <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Chỉnh sửa hồ sơ</Text>
+        <Text style={[styles.headerTitle, { color: textColor }]}>Chỉnh sửa hồ sơ</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -35,7 +92,7 @@ const EditProfileScreen = ({ navigation, route }: { navigation: any; route: any 
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrap}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{fullName.charAt(0)}</Text>
+              <Text style={styles.avatarText}>{fullName ? fullName.charAt(0).toUpperCase() : 'N'}</Text>
             </View>
             <TouchableOpacity style={styles.avatarEditButton}>
               <Ionicons name="camera-outline" size={16} color="#fff" />
@@ -46,17 +103,17 @@ const EditProfileScreen = ({ navigation, route }: { navigation: any; route: any 
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.label}>Họ và tên</Text>
-        <View style={styles.inputWrap}>
-          <Ionicons name="person-outline" size={18} color="#666" />
-          <TextInput style={styles.input} value={fullName} onChangeText={setFullName} placeholder="Họ và tên" placeholderTextColor="#999" />
+        <Text style={[styles.label, { color: textColor }]}>Họ và tên</Text>
+        <View style={[styles.inputWrap, { backgroundColor: inputBgColor }]}>
+          <Ionicons name="person-outline" size={18} color={subTextColor} />
+          <TextInput style={[styles.input, { color: textColor }]} value={fullName} onChangeText={setFullName} placeholder="Họ và tên" placeholderTextColor="#999" />
         </View>
 
-        <Text style={styles.label}>Số điện thoại</Text>
-        <View style={styles.inputWrap}>
-          <Ionicons name="call-outline" size={18} color="#666" />
+        <Text style={[styles.label, { color: textColor }]}>Số điện thoại</Text>
+        <View style={[styles.inputWrap, { backgroundColor: inputBgColor }]}>
+          <Ionicons name="call-outline" size={18} color={subTextColor} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: textColor }]}
             value={phone}
             onChangeText={setPhone}
             placeholder="Số điện thoại"
@@ -65,11 +122,11 @@ const EditProfileScreen = ({ navigation, route }: { navigation: any; route: any 
           />
         </View>
 
-        <Text style={styles.label}>Email</Text>
-        <View style={styles.inputWrap}>
-          <Ionicons name="mail-outline" size={18} color="#666" />
+        <Text style={[styles.label, { color: textColor }]}>Email</Text>
+        <View style={[styles.inputWrap, { backgroundColor: inputBgColor }]}>
+          <Ionicons name="mail-outline" size={18} color={subTextColor} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: textColor }]}
             value={email}
             onChangeText={setEmail}
             placeholder="Email"
@@ -79,17 +136,20 @@ const EditProfileScreen = ({ navigation, route }: { navigation: any; route: any 
           />
         </View>
 
-        <Text style={styles.label}>Khu vực thường chơi</Text>
-        <TouchableOpacity style={styles.inputWrap}>
-          <Ionicons name="location-outline" size={18} color="#666" />
-          <Text style={styles.selectText}>{area}</Text>
+        <Text style={[styles.label, { color: textColor }]}>Khu vực thường chơi</Text>
+        <TouchableOpacity 
+          style={[styles.inputWrap, { backgroundColor: inputBgColor }]}
+          onPress={() => setAreaModalVisible(true)}
+        >
+          <Ionicons name="location-outline" size={18} color={subTextColor} />
+          <Text style={[styles.selectText, { color: textColor }]}>{area}</Text>
           <Ionicons name="chevron-down" size={16} color="#999" />
         </TouchableOpacity>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Bảo mật & Quyền riêng tư</Text>
+        <View style={[styles.section, { backgroundColor: inputBgColor }]}>
+          <Text style={[styles.sectionTitle, { color: subTextColor }]}>Bảo mật & Quyền riêng tư</Text>
           <View style={styles.menuItem}>
-            <Text style={styles.menuText}>Hiển thị hồ sơ công khai</Text>
+            <Text style={[styles.menuText, { color: textColor }]}>Hiển thị hồ sơ công khai</Text>
             <TouchableOpacity
               style={[styles.toggle, publicProfile && styles.toggleOn]}
               onPress={() => setPublicProfile((v) => !v)}
@@ -99,11 +159,54 @@ const EditProfileScreen = ({ navigation, route }: { navigation: any; route: any 
           </View>
         </View>
 
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Ionicons name="save-outline" size={18} color="#fff" />
-          <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
+        <TouchableOpacity 
+          style={[styles.saveButton, loading && { opacity: 0.7 }]} 
+          onPress={handleSave}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="save-outline" size={18} color="#fff" />
+              <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
+            </>
+          )}
         </TouchableOpacity>
       </ScrollView>
+
+      <Modal
+        visible={areaModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setAreaModalVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setAreaModalVisible(false)}
+        >
+          <View style={[styles.modalContent, { backgroundColor: bgColor }]}>
+            <Text style={[styles.modalTitle, { color: textColor }]}>Chọn khu vực thường chơi</Text>
+            <FlatList
+              data={areas}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={[styles.modalItem, { borderBottomColor: borderColor }]}
+                  onPress={() => {
+                    setArea(item);
+                    setAreaModalVisible(false);
+                  }}
+                >
+                  <Text style={[styles.modalItemText, { color: item === area ? '#22c55e' : textColor }]}>{item}</Text>
+                  {item === area && <Ionicons name="checkmark" size={20} color="#22c55e" />}
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -190,6 +293,21 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   saveButtonText: { color: '#fff', fontWeight: 'bold', fontSize: 15 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '70%',
+  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+  },
+  modalItemText: { fontSize: 16 },
 });
 
 export default EditProfileScreen;

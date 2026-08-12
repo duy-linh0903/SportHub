@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SportHub.Models
@@ -10,6 +10,7 @@ namespace SportHub.Models
         [Required]
         public Guid SportCenterId {  get; set; }
         [ForeignKey(nameof(SportCenterId))]
+        [System.Text.Json.Serialization.JsonIgnore]
         public virtual SportCenters sportCenter { get; set; }
         [Required]
         public string Url { get; set; }

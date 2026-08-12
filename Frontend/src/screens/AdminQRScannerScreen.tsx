@@ -1,24 +1,65 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-// Dummy - vé giả lập sau khi "quét" thành công. Khi tích hợp thật sẽ thay bằng
-// react-native-vision-camera hoặc expo-camera + kết quả trả về từ API check-in.
-const DUMMY_SCANNED_TICKET = {
-  bookingCode: 'SH-29384-XB',
-  fieldName: 'Sân Cầu Lông A1',
-  timeSlot: '17:00 - 18:30',
-  customerName: 'Nguyễn Văn An',
-  totalGuests: 22,
-  checkedInGuests: 14,
-};
+import { bookingsApi } from '../api/bookingsApi';
+import { fieldsApi } from '../api/fieldsApi';
+import { usersApi } from '../api/usersApi';
+import { BookingResponseDto, FieldResponseDto, UserResponseDto } from '../types/api';
 
 const AdminQRScannerScreen = () => {
   const [scanned, setScanned] = useState(false);
+  const [bookingIdInput, setBookingIdInput] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSimulateScan = () => setScanned(true);
-  const handleRescan = () => setScanned(false);
+  const [booking, setBooking] = useState<BookingResponseDto | null>(null);
+  const [field, setField] = useState<FieldResponseDto | null>(null);
+  const [user, setUser] = useState<UserResponseDto | null>(null);
+
+  const handleSimulateScan = async () => {
+    if (!bookingIdInput.trim()) {
+      Alert.alert('Thông báo', 'Vui lòng nhập mã booking để mô phỏng quét!');
+      return;
+    }
+    setLoading(true);
+    try {
+      const b = await bookingsApi.getById(bookingIdInput.trim());
+      setBooking(b);
+      const f = await fieldsApi.getById(b.fieldId);
+      setField(f);
+      try {
+        const u = await usersApi.getById(b.userId);
+        setUser(u);
+      } catch (err) {
+        console.log('Cannot fetch user', err);
+      }
+      setScanned(true);
+    } catch (err) {
+      Alert.alert('Thông báo', 'Không tìm thấy mã booking này trên hệ thống!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRescan = () => {
+    setScanned(false);
+    setBooking(null);
+    setField(null);
+    setUser(null);
+    setBookingIdInput('');
+  };
+
+  const handleConfirm = async () => {
+    if (!booking) return;
+    try {
+      await bookingsApi.updateStatus(booking.bookingId, { status: 'Completed' });
+      Alert.alert('Thông báo', 'Check-in thành công!');
+      handleRescan();
+    } catch (err) {
+      Alert.alert('Thông báo', 'Cập nhật trạng thái thất bại!');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -36,14 +77,22 @@ const AdminQRScannerScreen = () => {
         <Text style={styles.cameraHint}>Đưa mã QR của khách vào khung hình</Text>
 
         {!scanned && (
-          <TouchableOpacity style={styles.simulateBtn} onPress={handleSimulateScan}>
-            <Ionicons name="qr-code-outline" size={16} color="#fff" />
-            <Text style={styles.simulateBtnText}>Giả lập quét thành công</Text>
-          </TouchableOpacity>
+          <View style={{ marginTop: 20, width: '80%' }}>
+            <TextInput
+              style={{ backgroundColor: '#fff', borderRadius: 8, padding: 12, marginBottom: 12 }}
+              placeholder="Nhập mã đặt sân (Booking ID)"
+              value={bookingIdInput}
+              onChangeText={setBookingIdInput}
+            />
+            <TouchableOpacity style={styles.simulateBtn} onPress={handleSimulateScan} disabled={loading}>
+              <Ionicons name="search-outline" size={16} color="#fff" />
+              <Text style={styles.simulateBtnText}>{loading ? 'Đang tìm...' : 'Tìm kiếm vé'}</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
-      {scanned && (
+      {scanned && booking && (
         <View style={styles.resultCard}>
           <View style={styles.resultHeaderRow}>
             <Ionicons name="checkmark-circle" size={18} color="#22c55e" />
@@ -51,28 +100,30 @@ const AdminQRScannerScreen = () => {
           </View>
 
           <Text style={styles.sectionLabel}>Thông tin sân</Text>
-          <Text style={styles.fieldName}>{DUMMY_SCANNED_TICKET.fieldName}</Text>
-          <Text style={styles.fieldMeta}>{DUMMY_SCANNED_TICKET.timeSlot}</Text>
+          <Text style={styles.fieldName}>{field?.name || 'Sân chưa xác định'}</Text>
+          <Text style={styles.fieldMeta}>{new Date(booking.bookingDate).toLocaleDateString('vi-VN')}</Text>
 
           <View style={styles.divider} />
 
           <Text style={styles.sectionLabel}>Thông tin khách</Text>
-          <Text style={styles.fieldName}>{DUMMY_SCANNED_TICKET.customerName}</Text>
-          <Text style={styles.fieldMeta}>Mã đặt sân: {DUMMY_SCANNED_TICKET.bookingCode}</Text>
+          <Text style={styles.fieldName}>{user?.name || 'Khách hàng'}</Text>
+          <Text style={styles.fieldMeta}>Mã đặt sân: {booking.bookingId}</Text>
 
           <View style={styles.guestCountBox}>
             <Text style={styles.guestCountValue}>
-              {DUMMY_SCANNED_TICKET.checkedInGuests}
-              <Text style={styles.guestCountTotal}> / {DUMMY_SCANNED_TICKET.totalGuests} khách</Text>
+              {booking.status === 'Completed' ? 'Đã Check-in' : 'Chưa Check-in'}
             </Text>
-            <Text style={styles.guestCountLabel}>đã check-in</Text>
           </View>
 
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.rescanBtn} onPress={handleRescan}>
               <Text style={styles.rescanText}>Quét lại</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.confirmBtn} onPress={handleRescan}>
+            <TouchableOpacity 
+              style={[styles.confirmBtn, booking.status === 'Completed' && { backgroundColor: '#ccc' }]} 
+              onPress={handleConfirm}
+              disabled={booking.status === 'Completed'}
+            >
               <Ionicons name="checkmark" size={16} color="#fff" />
               <Text style={styles.confirmText}>Xác nhận check-in</Text>
             </TouchableOpacity>

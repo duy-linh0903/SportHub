@@ -11,17 +11,38 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const ResetPasswordScreen = ({ navigation }: { navigation: any }) => {
+import { authApi } from '../api/authApi';
+import { Alert } from 'react-native';
+
+const ResetPasswordScreen = ({ navigation, route }: { navigation: any; route: any }) => {
+  const email = route?.params?.email || '';
+  const otp = route?.params?.otp || '';
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const isLongEnough = password.length >= 8;
   const isMatching = password.length > 0 && password === confirmPassword;
   const canSubmit = isLongEnough && isMatching;
 
-  const handleSubmit = () => {
-    navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
+    setIsLoading(true);
+    try {
+      await authApi.resetPassword({
+        email,
+        otp,
+        newPassword: password,
+        verifyPassword: confirmPassword
+      });
+      Alert.alert('Thành công', 'Mật khẩu đã được đặt lại thành công.');
+      navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+    } catch (error: any) {
+      Alert.alert('Lỗi', error.response?.data?.message || 'Có lỗi xảy ra khi đặt lại mật khẩu.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

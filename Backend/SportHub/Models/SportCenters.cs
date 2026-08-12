@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SportHub.Models
 {
@@ -20,6 +21,10 @@ namespace SportHub.Models
         public string? Description { get; set; }
         public SportCenterStatus Status { get; set; }
         public DateTime CreatedAt {  get; set; }
+        [InverseProperty("sportCenter")]
+        public virtual ICollection<SportCenterImages> Images { get; set; }
+        [InverseProperty("SportCenter")]
+        public virtual ICollection<Fields> Fields { get; set; }
         public SportCenters()
         {
             Id = Guid.NewGuid();

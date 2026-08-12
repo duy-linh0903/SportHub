@@ -1,98 +1,146 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
-const DUMMY_USER = {
-  name: 'Nguyễn Văn An',
-  rank: 'Người chơi hạng Vàng',
-  appId: 'SportHub ID: 8829',
-};
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '../store/useAuthStore';
+import { usersApi } from '../api/usersApi';
+import { UserResponseDto } from '../types/api';
 
 const SettingsScreen = ({ navigation }: { navigation: any }) => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { userId, logout } = useAuthStore();
+  const [user, setUser] = useState<UserResponseDto | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogout = () => {
+  // Static Colors
+  const bgColor = '#f2f4f6';
+  const cardColor = '#fff';
+  const textColor = '#1a1a1a';
+  const subTextColor = '#666';
+  const borderColor = '#e2e8f0';
+
+  useEffect(() => {
+    if (userId) {
+      fetchProfile();
+    }
+    loadSettings();
+  }, [userId]);
+
+  const loadSettings = async () => {
+    try {
+      const notiState = await AsyncStorage.getItem('notificationsEnabled');
+      if (notiState !== null) {
+        setNotificationsEnabled(notiState === 'true');
+      }
+    } catch (e) {
+      console.error('Failed to load settings');
+    }
+  };
+
+  const toggleNotifications = async () => {
+    const newState = !notificationsEnabled;
+    setNotificationsEnabled(newState);
+    try {
+      await AsyncStorage.setItem('notificationsEnabled', newState.toString());
+    } catch (e) {
+      console.error('Failed to save settings');
+    }
+  };
+
+  const fetchProfile = async () => {
+    setLoading(true);
+    try {
+      const data = await usersApi.getById(userId!);
+      setUser(data);
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
+    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
+      <View style={[styles.header, { backgroundColor: cardColor, borderBottomColor: borderColor }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+          <Ionicons name="arrow-back" size={24} color={textColor} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cài đặt</Text>
+        <Text style={[styles.headerTitle, { color: textColor }]}>Cài đặt</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.userCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{DUMMY_USER.name.charAt(0)}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.userName}>{DUMMY_USER.name}</Text>
-            <Text style={styles.userRank}>{DUMMY_USER.rank}</Text>
-          </View>
-          <Text style={styles.appId}>{DUMMY_USER.appId}</Text>
+        <View style={[styles.userCard, { backgroundColor: cardColor, borderColor }]}>
+          {loading ? (
+             <ActivityIndicator size="small" color="#006e2f" style={{ marginHorizontal: 'auto' }} />
+          ) : user ? (
+            <>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{user.name ? user.name.charAt(0).toUpperCase() : 'U'}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.userName, { color: textColor }]}>{user.name}</Text>
+                <Text style={styles.userRank}>Người chơi hạng Đồng</Text>
+              </View>
+              <TouchableOpacity onPress={() => navigation.navigate('EditProfile', { profile: user })}>
+                <Ionicons name="pencil-outline" size={20} color={textColor} />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <Text style={{ textAlign: 'center', width: '100%' }}>Không thể tải thông tin</Text>
+          )}
         </View>
 
         <Text style={styles.sectionLabel}>ỨNG DỤNG</Text>
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: cardColor, borderColor }]}>
           <View style={styles.menuItem}>
             <View style={styles.menuLeft}>
-              <Ionicons name="notifications-outline" size={20} color="#333" />
-              <Text style={styles.menuText}>Thông báo</Text>
+              <Ionicons name="notifications-outline" size={20} color={textColor} />
+              <Text style={[styles.menuText, { color: textColor }]}>Thông báo</Text>
             </View>
             <TouchableOpacity
               style={[styles.toggle, notificationsEnabled && styles.toggleOn]}
-              onPress={() => setNotificationsEnabled((v) => !v)}
+              onPress={toggleNotifications}
             >
               <View style={[styles.toggleDot, notificationsEnabled && styles.toggleDotOn]} />
             </TouchableOpacity>
           </View>
-          <View style={styles.divider} />
-          <TouchableOpacity style={styles.menuItem}>
-            <View style={styles.menuLeft}>
-              <Ionicons name="language-outline" size={20} color="#333" />
-              <Text style={styles.menuText}>Ngôn ngữ</Text>
-            </View>
-            <View style={styles.menuRight}>
-              <Text style={styles.menuValue}>Tiếng Việt</Text>
-              <Ionicons name="chevron-forward" size={18} color="#999" />
-            </View>
-          </TouchableOpacity>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: bgColor }]} />
           <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('ChangePassword')}>
             <View style={styles.menuLeft}>
-              <Ionicons name="key-outline" size={20} color="#333" />
-              <Text style={styles.menuText}>Đổi mật khẩu</Text>
+              <Ionicons name="key-outline" size={20} color={textColor} />
+              <Text style={[styles.menuText, { color: textColor }]}>Đổi mật khẩu</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
         </View>
 
         <Text style={styles.sectionLabel}>THÔNG TIN</Text>
-        <View style={styles.section}>
+        <View style={[styles.section, { backgroundColor: cardColor, borderColor }]}>
           <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('PrivacyPolicy')}>
             <View style={styles.menuLeft}>
-              <Ionicons name="shield-checkmark-outline" size={20} color="#333" />
-              <Text style={styles.menuText}>Chính sách bảo mật</Text>
+              <Ionicons name="shield-checkmark-outline" size={20} color={textColor} />
+              <Text style={[styles.menuText, { color: textColor }]}>Chính sách bảo mật</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: bgColor }]} />
           <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('TermsOfService')}>
             <View style={styles.menuLeft}>
-              <Ionicons name="document-text-outline" size={20} color="#333" />
-              <Text style={styles.menuText}>Điều khoản sử dụng</Text>
+              <Ionicons name="document-text-outline" size={20} color={textColor} />
+              <Text style={[styles.menuText, { color: textColor }]}>Điều khoản sử dụng</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color="#999" />
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <TouchableOpacity style={[styles.logoutBtn, { backgroundColor: cardColor, borderColor: '#ffdada' }]} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color="#ba1a1a" />
           <Text style={styles.logoutText}>Đăng xuất</Text>
         </TouchableOpacity>
@@ -127,6 +175,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
     gap: 12,
+    minHeight: 80,
   },
   avatar: {
     width: 52,

@@ -1,4 +1,4 @@
-﻿using SportHub.Models;
+using SportHub.Models;
 
 namespace SportHub.DTOs.Booking
 {
@@ -12,5 +12,12 @@ namespace SportHub.DTOs.Booking
         public double TotalPrice { get; set; }
         public string? CheckInCode { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        public string FieldName { get; set; } = string.Empty;
+        public string FieldType { get; set; } = string.Empty;
+        public Guid SportCenterId { get; set; }
+        public string SportCenterName { get; set; } = string.Empty;
+        public string SportCenterAddress { get; set; } = string.Empty;
+        public string TimeSlots { get; set; } = string.Empty;
     }
 }

@@ -7,14 +7,10 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
-const DUMMY_FIELD = {
-  name: 'Sân Cầu Lông SportHub A1',
-  date: '25 Tháng 10, 2023',
-};
 
 const RATING_LABELS: Record<number, string> = {
   1: 'Rất tệ',
@@ -25,15 +21,44 @@ const RATING_LABELS: Record<number, string> = {
 };
 
 const WriteReviewScreen = ({ navigation, route }: { navigation: any; route: any }) => {
-  const field = route?.params?.field || DUMMY_FIELD;
+  const field = route?.params?.field || { name: 'Sân chưa xác định', sportCenterId: '' };
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const canSubmit = rating > 0 && comment.trim().length > 0;
+  const canSubmit = rating > 0 && comment.trim().length > 0 && !submitting;
 
-  const handleSubmit = () => {
-    // TODO: gọi API gửi đánh giá khi tích hợp backend
-    navigation.goBack();
+  const handleSubmit = async () => {
+    if (!field.sportCenterId) {
+      Alert.alert('Thông báo', 'Không tìm thấy ID sân để đánh giá.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { reviewsApi } = await import('../api/reviewsApi');
+      const { useAuthStore } = await import('../store/useAuthStore');
+      const userId = useAuthStore.getState().userId;
+      
+      if (!userId) {
+        Alert.alert('Thông báo', 'Vui lòng đăng nhập để đánh giá.');
+        setSubmitting(false);
+        return;
+      }
+
+      await reviewsApi.create({
+        userId,
+        sportCenterId: field.sportCenterId,
+        bookingId: route?.params?.bookingId || '00000000-0000-0000-0000-000000000500', // Use existing bookingId for UI testing fallback
+        rating,
+        comment,
+      });
+      Alert.alert('Thông báo', 'Đánh giá của bạn đã được gửi!');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error submitting review', error);
+      Alert.alert('Thông báo', 'Gửi đánh giá thất bại. Vui lòng thử lại sau.');
+      setSubmitting(false);
+    }
   };
 
   return (

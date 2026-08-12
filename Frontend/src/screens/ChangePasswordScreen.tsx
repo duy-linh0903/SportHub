@@ -7,39 +7,67 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { authApi } from '../api/authApi';
+import { useThemeStore } from '../store/useThemeStore';
 
 const ChangePasswordScreen = ({ navigation }: { navigation: any }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { isDarkMode } = useThemeStore();
+
+  const bgColor = isDarkMode ? '#121212' : '#fff';
+  const headerColor = isDarkMode ? '#1e1e1e' : '#fff';
+  const textColor = isDarkMode ? '#fff' : '#1a1a1a';
+  const subTextColor = isDarkMode ? '#a1a1aa' : '#666';
+  const inputBgColor = isDarkMode ? '#2c2c2e' : '#f2f4f6';
 
   const isMatching = newPassword.length > 0 && newPassword === confirmPassword;
   const canSubmit = currentPassword.length > 0 && newPassword.length >= 8 && isMatching;
 
-  const handleSubmit = () => {
-    navigation.goBack();
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      await authApi.changePassword({
+        oldPassword: currentPassword,
+        newPassword: newPassword,
+        verifyPassword: confirmPassword,
+      });
+      Alert.alert('Thành công', 'Đổi mật khẩu thành công.', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+    } catch (error: any) {
+      console.error('Change password error', error);
+      const msg = error?.response?.data?.message || 'Có lỗi xảy ra, vui lòng thử lại.';
+      Alert.alert('Lỗi', msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: bgColor }]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+        <View style={[styles.header, { backgroundColor: headerColor }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} disabled={loading}>
+            <Ionicons name="arrow-back" size={24} color={textColor} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Đổi mật khẩu</Text>
+          <Text style={[styles.headerTitle, { color: textColor }]}>Đổi mật khẩu</Text>
           <View style={{ width: 24 }} />
         </View>
 
         <View style={styles.content}>
-          <Text style={styles.label}>Mật khẩu hiện tại</Text>
-          <View style={styles.inputWrap}>
-            <Ionicons name="lock-closed-outline" size={18} color="#666" />
+          <Text style={[styles.label, { color: textColor }]}>Mật khẩu hiện tại</Text>
+          <View style={[styles.inputWrap, { backgroundColor: inputBgColor }]}>
+            <Ionicons name="lock-closed-outline" size={18} color={subTextColor} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: textColor }]}
               placeholder="••••••••"
               placeholderTextColor="#999"
               value={currentPassword}
@@ -48,11 +76,11 @@ const ChangePasswordScreen = ({ navigation }: { navigation: any }) => {
             />
           </View>
 
-          <Text style={styles.label}>Mật khẩu mới</Text>
-          <View style={styles.inputWrap}>
-            <Ionicons name="key-outline" size={18} color="#666" />
+          <Text style={[styles.label, { color: textColor }]}>Mật khẩu mới</Text>
+          <View style={[styles.inputWrap, { backgroundColor: inputBgColor }]}>
+            <Ionicons name="key-outline" size={18} color={subTextColor} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: textColor }]}
               placeholder="Tối thiểu 8 ký tự"
               placeholderTextColor="#999"
               value={newPassword}
@@ -61,11 +89,11 @@ const ChangePasswordScreen = ({ navigation }: { navigation: any }) => {
             />
           </View>
 
-          <Text style={styles.label}>Xác nhận mật khẩu mới</Text>
-          <View style={styles.inputWrap}>
-            <Ionicons name="key-outline" size={18} color="#666" />
+          <Text style={[styles.label, { color: textColor }]}>Xác nhận mật khẩu mới</Text>
+          <View style={[styles.inputWrap, { backgroundColor: inputBgColor }]}>
+            <Ionicons name="key-outline" size={18} color={subTextColor} />
             <TextInput
-              style={styles.input}
+              style={[styles.input, { color: textColor }]}
               placeholder="••••••••"
               placeholderTextColor="#999"
               value={confirmPassword}
@@ -78,11 +106,15 @@ const ChangePasswordScreen = ({ navigation }: { navigation: any }) => {
           )}
 
           <TouchableOpacity
-            style={[styles.submitButton, !canSubmit && styles.submitButtonDisabled]}
-            disabled={!canSubmit}
+            style={[styles.submitButton, (!canSubmit || loading) && styles.submitButtonDisabled]}
+            disabled={!canSubmit || loading}
             onPress={handleSubmit}
           >
-            <Text style={styles.submitButtonText}>Lưu thay đổi</Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.submitButtonText}>Lưu thay đổi</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>

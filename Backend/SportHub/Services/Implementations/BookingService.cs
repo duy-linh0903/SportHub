@@ -1,8 +1,10 @@
-﻿using System.Linq;
+using System.Linq;
 using SportHub.DTOs.Booking;
 using SportHub.Models;
 using SportHub.Repositories.Interfaces;
 using SportHub.Services.Interfaces;
+using Microsoft.AspNetCore.SignalR;
+using SportHub.Hubs;
 
 namespace SportHub.Services.Implementations
 {
@@ -12,17 +14,20 @@ namespace SportHub.Services.Implementations
         private readonly IFieldRepository _fieldRepository;
         private readonly IServiceRepository _serviceRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
         public BookingService(
             IBookingRepository bookingRepository,
             IFieldRepository fieldRepository,
             IServiceRepository serviceRepository,
-            IUserRepository userRepository)
+            IUserRepository userRepository,
+            IHubContext<NotificationHub> hubContext)
         {
             _bookingRepository = bookingRepository;
             _fieldRepository = fieldRepository;
             _serviceRepository = serviceRepository;
             _userRepository = userRepository;
+            _hubContext = hubContext;
         }
 
         public async Task<List<BookingResponseDto>> GetAllBookingsAsync()
@@ -134,6 +139,10 @@ namespace SportHub.Services.Implementations
 
             await _bookingRepository.CreateBookingWithDetailsAsync(booking, bookingServices, bookingSlots);
 
+            string title = "Đặt sân thành công";
+            string body = $"Bạn đã đặt sân thành công. Mã Check-in của bạn là: {booking.CheckInCode}";
+            await _hubContext.Clients.Group(userId.ToString()).SendAsync("ReceiveNotification", title, body, booking.Id);
+
             return BookingServiceDto(booking);
         }
 
@@ -146,6 +155,12 @@ namespace SportHub.Services.Implementations
             }
 
             await _bookingRepository.UpdateStatusAsync(bookingId, status.ToString());
+
+            string title = status == BookingStatus.Cancelled ? "Lịch đặt bị hủy" : 
+                           status == BookingStatus.Confirmed ? "Lịch đặt đã xác nhận" : "Cập nhật lịch đặt";
+            string body = $"Lịch đặt sân của bạn đã được chuyển sang trạng thái: {status}";
+            
+            await _hubContext.Clients.Group(booking.UserId.ToString()).SendAsync("ReceiveNotification", title, body, bookingId);
         }
 
         public async Task CancelBookingAsync(Guid bookingId)
@@ -177,6 +192,11 @@ namespace SportHub.Services.Implementations
             return BookingServiceListDto(bookingList);
         }
 
+        public async Task<List<Guid>> GetBookedSlotIdsAsync(Guid fieldId, DateOnly date)
+        {
+            return await _bookingRepository.GetBookedSlotIdsAsync(fieldId, date);
+        }
+
         private static string GenerateCheckInCode()
         {
             return Guid.NewGuid().ToString("N").Substring(0, 8).ToUpperInvariant();
@@ -184,6 +204,16 @@ namespace SportHub.Services.Implementations
 
         public BookingResponseDto BookingServiceDto(Bookings booking)
         {
+            string timeSlotsStr = string.Empty;
+            if (booking.BookingSlots != null && booking.BookingSlots.Any())
+            {
+                var times = booking.BookingSlots
+                    .Where(bs => bs.TimeSlots != null)
+                    .OrderBy(bs => bs.TimeSlots.StartTime)
+                    .Select(bs => $"{bs.TimeSlots.StartTime.ToString("HH:mm")} - {bs.TimeSlots.EndTime.ToString("HH:mm")}");
+                timeSlotsStr = string.Join(", ", times);
+            }
+
             return new BookingResponseDto
             {
                 BookingId = booking.Id,
@@ -193,7 +223,13 @@ namespace SportHub.Services.Implementations
                 Status = booking.Status,
                 TotalPrice = booking.TotalPrice,
                 CheckInCode = booking.CheckInCode,
-                CreatedAt = booking.CreatedAt
+                CreatedAt = booking.CreatedAt,
+                FieldName = booking.Fields?.Name ?? string.Empty,
+                FieldType = booking.Fields?.Type ?? string.Empty,
+                SportCenterId = booking.Fields?.SportCenterId ?? Guid.Empty,
+                SportCenterName = booking.Fields?.SportCenter?.Name ?? string.Empty,
+                SportCenterAddress = booking.Fields?.SportCenter?.Address ?? string.Empty,
+                TimeSlots = timeSlotsStr
             };
         }
 

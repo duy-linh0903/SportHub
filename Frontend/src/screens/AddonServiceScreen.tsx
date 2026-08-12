@@ -1,32 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
-// ===== Dummy Data - mô phỏng model ServiceItem từ backend =====
-interface ServiceItem {
-  id: string;
-  name: string;
-  price: number;
-  unit: string;
-  icon: string;
-}
-
-const DUMMY_SERVICES: ServiceItem[] = [
-  { id: 'SV01', name: 'Thuê áo bib', price: 15000, unit: 'bộ', icon: 'shirt-outline' },
-  { id: 'SV02', name: 'Thuê trọng tài', price: 200000, unit: 'trận', icon: 'person-outline' },
-  { id: 'SV03', name: 'Mua nước uống', price: 10000, unit: 'chai', icon: 'water-outline' },
-  { id: 'SV04', name: 'Thuê bóng', price: 30000, unit: 'quả', icon: 'football-outline' },
-];
+import { servicesApi } from '../api/servicesApi';
+import { ServiceResponseDto } from '../types/api';
 
 const AddonServiceScreen = ({ navigation, route }: { navigation: any; route: any }) => {
+  const [services, setServices] = useState<ServiceResponseDto[]>([]);
+  const [loading, setLoading] = useState(true);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    fetchServices();
+  }, []);
+
+  const fetchServices = async () => {
+    setLoading(true);
+    try {
+      const data = await servicesApi.getAll();
+      setServices(data);
+    } catch (error) {
+      console.error('Failed to fetch services:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const updateQuantity = (id: string, delta: number) => {
     setQuantities((prev) => {
@@ -36,22 +41,30 @@ const AddonServiceScreen = ({ navigation, route }: { navigation: any; route: any
     });
   };
 
-  const selectedServices = DUMMY_SERVICES.filter((s) => (quantities[s.id] || 0) > 0);
+  const selectedServices = services.filter((s) => (quantities[s.serviceId] || 0) > 0);
   const totalPrice = selectedServices.reduce(
-    (sum, s) => sum + s.price * (quantities[s.id] || 0),
+    (sum, s) => sum + s.price * (quantities[s.serviceId] || 0),
     0,
   );
-  const totalItems = selectedServices.reduce((sum, s) => sum + (quantities[s.id] || 0), 0);
+  const totalItems = selectedServices.reduce((sum, s) => sum + (quantities[s.serviceId] || 0), 0);
 
   const handleContinue = () => {
     navigation.navigate('Checkout', {
       ...route?.params,
       selectedServices: selectedServices.map((s) => ({
         ...s,
-        quantity: quantities[s.id],
+        quantity: quantities[s.serviceId],
       })),
     });
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#22c55e" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -69,30 +82,30 @@ const AddonServiceScreen = ({ navigation, route }: { navigation: any; route: any
           Chọn thêm các dịch vụ có sẵn tại sân để trải nghiệm tốt nhất khi thi đấu.
         </Text>
 
-        {DUMMY_SERVICES.map((service) => (
-          <View key={service.id} style={styles.serviceCard}>
+        {services.map((service) => (
+          <View key={service.serviceId} style={styles.serviceCard}>
             <View style={styles.serviceIconWrap}>
-              <Ionicons name={service.icon} size={22} color="#22c55e" />
+              <Ionicons name="pricetag-outline" size={22} color="#22c55e" />
             </View>
 
             <View style={styles.serviceInfo}>
               <Text style={styles.serviceName}>{service.name}</Text>
               <Text style={styles.servicePrice}>
-                {service.price.toLocaleString('vi-VN')}đ/{service.unit}
+                {service.price.toLocaleString('vi-VN')}đ
               </Text>
             </View>
 
             <View style={styles.quantityControl}>
               <TouchableOpacity
                 style={styles.quantityButton}
-                onPress={() => updateQuantity(service.id, -1)}
+                onPress={() => updateQuantity(service.serviceId, -1)}
               >
                 <Ionicons name="remove" size={18} color="#6b7280" />
               </TouchableOpacity>
-              <Text style={styles.quantityText}>{quantities[service.id] || 0}</Text>
+              <Text style={styles.quantityText}>{quantities[service.serviceId] || 0}</Text>
               <TouchableOpacity
                 style={styles.quantityButton}
-                onPress={() => updateQuantity(service.id, 1)}
+                onPress={() => updateQuantity(service.serviceId, 1)}
               >
                 <Ionicons name="add" size={18} color="#22c55e" />
               </TouchableOpacity>

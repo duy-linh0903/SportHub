@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SportHub.Data;
 using SportHub.Models;
 using SportHub.Repositories.Interfaces;
@@ -16,12 +16,12 @@ namespace SportHub.Repositories.Implementations
 
         public async Task<List<SportCenters>> GetAllAsync()
         {
-            return await _context.SportCenters.ToListAsync();
+            return await _context.SportCenters.Include(sc => sc.Images).Include(sc => sc.Fields).ToListAsync();
         }
 
         public async Task<SportCenters?> GetByIdAsync(Guid id)
         {
-            return await _context.SportCenters.FirstOrDefaultAsync(s => s.Id == id);
+            return await _context.SportCenters.Include(sc => sc.Images).FirstOrDefaultAsync(s => s.Id == id);
         }
 
         public async Task AddAsync(SportCenters sport)
@@ -55,6 +55,7 @@ namespace SportHub.Repositories.Implementations
         public async Task<List<SportCenters>> SearchByNameAsync(string name)
         {
             return await _context.SportCenters
+                .Include(sc => sc.Images)
                 .Where(s => s.Name.Contains(name))
                 .ToListAsync();
         }

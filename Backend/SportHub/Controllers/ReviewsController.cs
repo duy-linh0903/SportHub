@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportHub.DTOs.Review;
 using SportHub.Services.Interfaces;
@@ -22,7 +22,7 @@ namespace SportHub.Controllers
             return Ok(await _reviewService.GetReviewsBySportCenterAsync(sportCenterId));
         }
 
-        [Authorize(Roles = "User")]
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<ReviewResponseDto>> Create([FromBody] CreateReviewDto dto)
         {

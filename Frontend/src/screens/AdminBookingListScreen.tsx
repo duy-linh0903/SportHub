@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { bookingsApi } from '../api/bookingsApi';
+import { fieldsApi } from '../api/fieldsApi';
+import { usersApi } from '../api/usersApi';
+import { BookingResponseDto, FieldResponseDto, UserResponseDto } from '../types/api';
 
 interface AdminBooking {
   id: string;
@@ -10,29 +14,77 @@ interface AdminBooking {
   date: string;
   time: string;
   price: string;
-  status: 'pending' | 'confirmed' | 'rejected';
+  status: 'Pending' | 'Confirmed' | 'Cancelled' | 'Completed' | string;
+  originalData: BookingResponseDto;
 }
-
-const INITIAL_BOOKINGS: AdminBooking[] = [
-  { id: 'B1', customerName: 'Nguyễn Văn An', fieldName: 'Sân Cầu Lông A1', date: '25 Thg 10, 2023', time: '19:00 - 20:00', price: '240.000đ', status: 'pending' },
-  { id: 'B2', customerName: 'Trần Thị Hồng B', fieldName: 'Sân Bóng đá Mini B2', date: '25 Thg 10, 2023', time: '20:00 - 21:30', price: '450.000đ', status: 'pending' },
-  { id: 'B3', customerName: 'Lê Hoàng Nam', fieldName: 'Sân Tennis T1', date: '24 Thg 10, 2023', time: '08:00 - 09:00', price: '280.000đ', status: 'confirmed' },
-];
 
 const TABS = [
   { key: 'all', label: 'Tất cả' },
-  { key: 'pending', label: 'Chờ duyệt' },
+  { key: 'Pending', label: 'Chờ duyệt' },
 ] as const;
 
-const AdminBookingListScreen = () => {
-  const [bookings, setBookings] = useState(INITIAL_BOOKINGS);
-  const [tab, setTab] = useState<'all' | 'pending'>('pending');
+const AdminBookingListScreen = ({ navigation }: { navigation: any }) => {
+  const [bookings, setBookings] = useState<AdminBooking[]>([]);
+  const [tab, setTab] = useState<'all' | 'Pending'>('Pending');
+  const [loading, setLoading] = useState(true);
 
-  const filtered = bookings.filter((b) => tab === 'all' || b.status === 'pending');
-  const pendingCount = bookings.filter((b) => b.status === 'pending').length;
+  useEffect(() => {
+    fetchBookings();
+  }, []);
 
-  const updateStatus = (id: string, status: 'confirmed' | 'rejected') => {
-    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status } : b)));
+  const fetchBookings = async () => {
+    setLoading(true);
+    try {
+      const allBookings = await bookingsApi.getAll();
+      const allFields = await fieldsApi.getAll();
+      
+      const fieldMap = new Map<string, FieldResponseDto>();
+      allFields.forEach(f => fieldMap.set(f.fieldId, f));
+
+      const mappedBookings: AdminBooking[] = [];
+      for (const b of allBookings) {
+        const field = fieldMap.get(b.fieldId);
+        
+        let customerName = 'Khách hàng';
+        try {
+          // Attempt to get user name
+          const user = await usersApi.getById(b.userId);
+          if (user) customerName = user.name;
+        } catch(e) {}
+
+        mappedBookings.push({
+          id: b.bookingId,
+          customerName: customerName,
+          fieldName: field ? field.name : 'Sân thể thao',
+          date: b.bookingDate,
+          time: '',
+          price: `${b.totalPrice.toLocaleString('vi-VN')}đ`,
+          status: b.status,
+          originalData: b
+        });
+      }
+
+      mappedBookings.sort((a, b) => new Date(b.originalData.createdAt).getTime() - new Date(a.originalData.createdAt).getTime());
+      setBookings(mappedBookings);
+    } catch (error) {
+      console.error(error);
+      Alert.alert('Lỗi', 'Không thể tải danh sách đơn.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filtered = bookings.filter((b) => tab === 'all' || b.status === tab);
+  const pendingCount = bookings.filter((b) => b.status === 'Pending').length;
+
+  const updateStatus = async (id: string, newStatus: string) => {
+    try {
+      await bookingsApi.updateStatus(id, { status: newStatus });
+      setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b)));
+    } catch (error) {
+      console.error('Failed to update status', error);
+      Alert.alert('Lỗi', 'Không thể cập nhật trạng thái đơn.');
+    }
   };
 
   return (
@@ -58,69 +110,79 @@ const AdminBookingListScreen = () => {
         ))}
       </View>
 
-      <FlatList
-        data={filtered}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Ionicons name="checkmark-done-circle-outline" size={44} color="#d1d5db" />
-            <Text style={styles.emptyText}>Không có đơn nào</Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{item.customerName.charAt(0)}</Text>
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#22c55e" />
+        </View>
+      ) : (
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Ionicons name="checkmark-done-circle-outline" size={44} color="#d1d5db" />
+              <Text style={styles.emptyText}>Không có đơn nào</Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <TouchableOpacity 
+              style={styles.card}
+              onPress={() => navigation.navigate('TicketDetail', { bookingCode: item.id })}
+              activeOpacity={0.7}
+            >
+              <View style={styles.cardHeaderRow}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{item.customerName.charAt(0).toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.customerName}>{item.customerName}</Text>
+                  <Text style={styles.fieldName}>{item.fieldName}</Text>
+                </View>
+                {item.status !== 'Pending' && (
+                  <View
+                    style={[
+                      styles.statusBadge,
+                      { backgroundColor: item.status === 'Confirmed' ? '#e6f4ea' : '#fef2f2' },
+                    ]}
+                  >
+                    <Text style={[styles.statusText, { color: item.status === 'Confirmed' ? '#22c55e' : '#ba1a1a' }]}>
+                      {item.status === 'Confirmed' ? 'ĐÃ DUYỆT' : (item.status === 'Cancelled' ? 'ĐÃ TỪ CHỐI' : item.status.toUpperCase())}
+                    </Text>
+                  </View>
+                )}
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.customerName}>{item.customerName}</Text>
-                <Text style={styles.fieldName}>{item.fieldName}</Text>
+
+              <View style={styles.infoRow}>
+                <Ionicons name="calendar-outline" size={13} color="#666" />
+                <Text style={styles.infoText}>{item.date} {item.time ? '• ' + item.time : ''}</Text>
               </View>
-              {item.status !== 'pending' && (
-                <View
-                  style={[
-                    styles.statusBadge,
-                    { backgroundColor: item.status === 'confirmed' ? '#e6f4ea' : '#fef2f2' },
-                  ]}
-                >
-                  <Text style={[styles.statusText, { color: item.status === 'confirmed' ? '#22c55e' : '#ba1a1a' }]}>
-                    {item.status === 'confirmed' ? 'ĐÃ DUYỆT' : 'ĐÃ TỪ CHỐI'}
-                  </Text>
+              <View style={styles.infoRow}>
+                <Ionicons name="cash-outline" size={13} color="#666" />
+                <Text style={styles.infoText}>{item.price}</Text>
+              </View>
+
+              {item.status === 'Pending' && (
+                <View style={styles.actionRow}>
+                  <TouchableOpacity
+                    style={styles.rejectBtn}
+                    onPress={() => updateStatus(item.id, 'Cancelled')}
+                  >
+                    <Text style={styles.rejectText}>Từ chối</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.approveBtn}
+                    onPress={() => updateStatus(item.id, 'Confirmed')}
+                  >
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                    <Text style={styles.approveText}>Duyệt đơn</Text>
+                  </TouchableOpacity>
                 </View>
               )}
-            </View>
-
-            <View style={styles.infoRow}>
-              <Ionicons name="calendar-outline" size={13} color="#666" />
-              <Text style={styles.infoText}>{item.date} • {item.time}</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Ionicons name="cash-outline" size={13} color="#666" />
-              <Text style={styles.infoText}>{item.price}</Text>
-            </View>
-
-            {item.status === 'pending' && (
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={styles.rejectBtn}
-                  onPress={() => updateStatus(item.id, 'rejected')}
-                >
-                  <Text style={styles.rejectText}>Từ chối</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.approveBtn}
-                  onPress={() => updateStatus(item.id, 'confirmed')}
-                >
-                  <Ionicons name="checkmark" size={16} color="#fff" />
-                  <Text style={styles.approveText}>Duyệt đơn</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        )}
-      />
+            </TouchableOpacity>
+          )}
+        />
+      )}
     </SafeAreaView>
   );
 };

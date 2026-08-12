@@ -1,4 +1,4 @@
-﻿using SportHub.DTOs.Booking;
+using SportHub.DTOs.Booking;
 using SportHub.Models;
 
 namespace SportHub.Services.Interfaces
@@ -14,5 +14,6 @@ namespace SportHub.Services.Interfaces
         Task<List<BookingResponseDto>> GetBookingsByFieldAsync(Guid fieldId);
         Task<List<BookingResponseDto>> GetBookingsBySportCenterAsync(Guid sportCenterId);
         Task<List<BookingResponseDto>> GetBookingsByDateRangeAsync(DateOnly startDate, DateOnly endDate);
+        Task<List<Guid>> GetBookedSlotIdsAsync(Guid fieldId, DateOnly date);
     }
 }

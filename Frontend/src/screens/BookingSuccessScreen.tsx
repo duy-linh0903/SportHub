@@ -3,18 +3,10 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
-const DUMMY_BOOKING = {
-  code: 'SH-29384-XB',
-  fieldName: 'Sân Cầu Lông SportHub A1',
-  date: '25 Tháng 10, 2023',
-  time: '19:00 - 20:00',
-  totalPrice: 300000,
-};
-
 const BookingSuccessScreen = ({ navigation, route }: { navigation: any; route: any }) => {
   const field = route?.params?.field;
-  const totalPrice = route?.params?.totalPrice || DUMMY_BOOKING.totalPrice;
-  const bookingCode = route?.params?.bookingCode || DUMMY_BOOKING.code;
+  const totalPrice = route?.params?.totalPrice || 0;
+  const bookingCode = route?.params?.bookingCode || 'Đang cập nhật';
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
@@ -33,13 +25,13 @@ const BookingSuccessScreen = ({ navigation, route }: { navigation: any; route: a
           <View style={styles.summaryRow}>
             <Ionicons name="location-outline" size={16} color="#6b7280" />
             <Text style={styles.summaryText}>
-              {field?.name || DUMMY_BOOKING.fieldName}
+              {field?.name || 'Sân chưa xác định'}
             </Text>
           </View>
           <View style={styles.summaryRow}>
             <Ionicons name="calendar-outline" size={16} color="#6b7280" />
             <Text style={styles.summaryText}>
-              {field?.date || DUMMY_BOOKING.date} • {field?.time || DUMMY_BOOKING.time}
+              {field?.date || 'N/A'} • {field?.time || 'N/A'}
             </Text>
           </View>
           <View style={styles.divider} />

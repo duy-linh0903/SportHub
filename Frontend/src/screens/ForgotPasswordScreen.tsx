@@ -11,12 +11,26 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 
+import { authApi } from '../api/authApi';
+import { Alert } from 'react-native';
+
 const ForgotPasswordScreen = ({ navigation }: { navigation: any }) => {
   const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const isValid = /\S+@\S+\.\S+/.test(email);
 
-  const handleSendCode = () => {
-    navigation.navigate('OTPVerification', { email, context: 'forgot-password' });
+  const handleSendCode = async () => {
+    if (!isValid) return;
+    setIsLoading(true);
+    try {
+      await authApi.forgotPassword({ email });
+      Alert.alert('Thành công', 'Mã OTP đã được gửi đến email của bạn.');
+      navigation.navigate('OTPVerification', { email, context: 'forgot-password' });
+    } catch (error: any) {
+      Alert.alert('Lỗi', error.response?.data?.message || 'Có lỗi xảy ra khi gửi OTP.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

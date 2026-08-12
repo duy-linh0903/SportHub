@@ -1,38 +1,142 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator, Linking, PermissionsAndroid, Platform, Alert } from 'react-native';
+import ViewShot from 'react-native-view-shot';
+import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
-// Mô phỏng model CheckInCode / Booking từ backend
-const DUMMY_TICKET = {
-  bookingCode: 'SH-29384-XB',
-  status: 'Thành công',
-  fieldName: 'Sân Cầu Lông SportHub A1',
-  address: 'Thiên Sơn Cao Cấp, Q7, TP.HCM',
-  date: '25 Tháng 10, 2023',
-  time: '19:00 - 20:00',
-  fieldNumber: 'Sân số 04',
-  totalPrice: 300000,
-};
-
-// Placeholder QR: lưới ô vuông ngẫu nhiên giả lập, thay bằng thư viện QR thật khi tích hợp API
-const QR_PATTERN = Array.from({ length: 49 }, (_, i) => (i * 7) % 3 === 0);
-
-const QrPlaceholder = () => (
-  <View style={styles.qrGrid}>
-    {QR_PATTERN.map((filled, i) => (
-      <View
-        key={i}
-        style={[styles.qrCell, filled && styles.qrCellFilled]}
-      />
-    ))}
-  </View>
-);
+import QRCode from 'react-native-qrcode-svg';
+import { bookingsApi } from '../api/bookingsApi';
+import { fieldsApi } from '../api/fieldsApi';
+import { BookingResponseDto, FieldResponseDto } from '../types/api';
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 const TicketDetailScreen = ({ navigation, route }: { navigation: any; route: any }) => {
-  const bookingCode = route?.params?.bookingCode || DUMMY_TICKET.bookingCode;
-  const field = route?.params?.field;
-  const totalPrice = route?.params?.totalPrice || DUMMY_TICKET.totalPrice;
+  const { bookingCode, field: passedField } = route?.params || {};
+  
+  const [booking, setBooking] = useState<BookingResponseDto | null>(null);
+  const [field, setField] = useState<FieldResponseDto | null>(null);
+  const [loading, setLoading] = useState(true);
+  
+  const viewShotRef = useRef<any>(null);
+
+  const requestStoragePermission = async () => {
+    if (Platform.OS === 'android') {
+      const permission = Platform.Version >= 33 
+        ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES 
+        : PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE;
+      
+      const hasPermission = await PermissionsAndroid.check(permission);
+      if (hasPermission) return true;
+      
+      const status = await PermissionsAndroid.request(permission);
+      return status === 'granted';
+    }
+    return true; // iOS permission handles implicitly or by library
+  };
+
+  const handleSaveToGallery = async () => {
+    try {
+      const hasPermission = await requestStoragePermission();
+      if (!hasPermission) {
+        Alert.alert('Lỗi', 'Cần cấp quyền truy cập để lưu ảnh vé.');
+        return;
+      }
+      
+      const uri = await viewShotRef.current?.capture();
+      if (uri) {
+        await CameraRoll.save(uri, { type: 'photo' });
+        Alert.alert('Thành công', 'Đã lưu ảnh vé vào thư viện ảnh!');
+      }
+    } catch (error) {
+      console.error('Lỗi khi lưu ảnh:', error);
+      Alert.alert('Lỗi', 'Không thể lưu ảnh, vui lòng thử lại.');
+    }
+  };
+
+  const handleCancelBooking = () => {
+    Alert.alert(
+      'Xác nhận hủy',
+      'Bạn có chắc chắn muốn hủy lịch đặt này không?',
+      [
+        { text: 'Không', style: 'cancel' },
+        { 
+          text: 'Có', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (bookingCode) {
+                await bookingsApi.delete(bookingCode);
+                Alert.alert('Thành công', 'Đã hủy lịch đặt sân');
+                fetchData();
+              }
+            } catch (error) {
+              console.error('Lỗi khi hủy:', error);
+              Alert.alert('Lỗi', 'Không thể hủy lịch đặt, vui lòng thử lại.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [bookingCode]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      if (bookingCode) {
+        const b = await bookingsApi.getById(bookingCode);
+        setBooking(b);
+        const f = await fieldsApi.getById(b.fieldId);
+        setField(f);
+      }
+    } catch (error) {
+      console.error('Error fetching ticket detail', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  let displayDate = passedField?.date || 'N/A';
+  if (booking) {
+    try { displayDate = format(new Date(booking.bookingDate), 'dd MMMM, yyyy', { locale: vi }); } catch(e) {}
+  }
+
+  const finalStatus = booking?.status !== undefined ? booking.status : passedField?.status !== undefined ? passedField.status : 'Pending';
+  let statusText = 'CHỜ DUYỆT';
+  let statusColor = '#F97316';
+  let statusBg = '#fff7ed';
+  
+  if (finalStatus === 'Confirmed' || finalStatus === 'confirmed' || finalStatus === 1) {
+    statusText = 'ĐÃ XÁC NHẬN';
+    statusColor = '#16a34a';
+    statusBg = '#dcfce7';
+  } else if (finalStatus === 'Cancelled' || finalStatus === 'cancelled' || finalStatus === 2) {
+    statusText = 'ĐÃ TỪ CHỐI / HỦY';
+    statusColor = '#ba1a1a';
+    statusBg = '#fef2f2';
+  } else if (finalStatus === 'Completed' || finalStatus === 'completed' || finalStatus === 3) {
+    statusText = 'ĐÃ XONG';
+    statusColor = '#666';
+    statusBg = '#f2f4f6';
+  }
+
+  const finalPrice = booking?.totalPrice || passedField?.price || 0;
+  const finalVenueName = booking?.sportCenterName || field?.name || passedField?.name || 'Đang tải...';
+  const finalAddress = booking?.sportCenterAddress || passedField?.address || 'Đang tải...';
+  const finalTime = booking?.timeSlots || passedField?.time || 'N/A';
+  const finalFieldType = booking?.fieldName || booking?.fieldType || field?.type || passedField?.fieldNumber || 'N/A';
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#006e2f" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -41,20 +145,28 @@ const TicketDetailScreen = ({ navigation, route }: { navigation: any; route: any
           <Ionicons name="chevron-back" size={26} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chi tiết đặt sân</Text>
-        <TouchableOpacity>
-          <Ionicons name="share-outline" size={22} color="#111827" />
+        <TouchableOpacity onPress={() => navigation.navigate('MainTab' as never)}>
+          <Ionicons name="close-outline" size={28} color="#111827" />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.statusBadge}>
-          <Ionicons name="checkmark-circle" size={14} color="#16a34a" />
-          <Text style={styles.statusText}>{DUMMY_TICKET.status}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
+          <Ionicons name="checkmark-circle" size={14} color={statusColor} />
+          <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
         </View>
 
-        <View style={styles.ticketCard}>
-          <Text style={styles.qrLabel}>MÃ VÉ ĐẶT SÂN</Text>
-          <QrPlaceholder />
+        <ViewShot ref={viewShotRef} options={{ format: 'jpg', quality: 1.0 }}>
+          <View style={styles.ticketCard}>
+            <Text style={styles.qrLabel}>MÃ VÉ ĐẶT SÂN</Text>
+          <View style={styles.qrWrapper}>
+            <QRCode
+              value={bookingCode}
+              size={140}
+              color="#111827"
+              backgroundColor="#fff"
+            />
+          </View>
           <Text style={styles.bookingCode}>{bookingCode}</Text>
 
           <View style={styles.dashedDivider} />
@@ -62,22 +174,24 @@ const TicketDetailScreen = ({ navigation, route }: { navigation: any; route: any
           <View style={styles.infoGrid}>
             <View style={styles.infoCol}>
               <Text style={styles.infoLabel}>Sân số</Text>
-              <Text style={styles.infoValue}>{field?.fieldNumber || DUMMY_TICKET.fieldNumber}</Text>
+              <Text style={styles.infoValue}>{finalFieldType}</Text>
             </View>
             <View style={styles.infoCol}>
               <Text style={styles.infoLabel}>Ngày đặt</Text>
-              <Text style={styles.infoValue}>{field?.date || DUMMY_TICKET.date}</Text>
+              <Text style={styles.infoValue}>{displayDate}</Text>
             </View>
           </View>
           <View style={styles.infoGrid}>
             <View style={styles.infoCol}>
               <Text style={styles.infoLabel}>Khung giờ</Text>
-              <Text style={styles.infoValue}>{field?.time || DUMMY_TICKET.time}</Text>
+              <Text style={styles.infoValue}>{finalTime}</Text>
             </View>
+          </View>
+          <View style={[styles.infoGrid, { marginBottom: 0 }]}>
             <View style={styles.infoCol}>
               <Text style={styles.infoLabel}>Tổng tiền</Text>
-              <Text style={[styles.infoValue, { color: '#22c55e' }]}>
-                {totalPrice.toLocaleString('vi-VN')}đ
+              <Text style={[styles.infoValue, { color: '#22c55e', fontSize: 16 }]}>
+                {typeof finalPrice === 'number' ? finalPrice.toLocaleString('vi-VN') + 'đ' : finalPrice}
               </Text>
             </View>
           </View>
@@ -87,29 +201,39 @@ const TicketDetailScreen = ({ navigation, route }: { navigation: any; route: any
           <View style={styles.venueThumb}>
             <Ionicons name="tennisball-outline" size={22} color="#22c55e" />
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.venueName}>{field?.name || DUMMY_TICKET.fieldName}</Text>
-            <Text style={styles.venueAddress}>{field?.address || DUMMY_TICKET.address}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.venueName}>{finalVenueName}</Text>
+              <Text style={styles.venueAddress}>{finalAddress}</Text>
+            </View>
           </View>
-        </View>
+        </ViewShot>
 
         <View style={styles.actionRow}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => {
+              if (finalAddress && finalAddress !== 'Đang tải...') {
+                const targetId = booking?.sportCenterId || passedField?.sportCenterId;
+                navigation.navigate('Map', { targetId });
+              }
+            }}
+          >
             <Ionicons name="navigate-outline" size={18} color="#374151" />
             <Text style={styles.actionButtonText}>Chỉ đường</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="call-outline" size={18} color="#374151" />
-            <Text style={styles.actionButtonText}>Liên hệ chủ sân</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveButton}>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSaveToGallery}>
           <Ionicons name="download-outline" size={18} color="#fff" />
           <Text style={styles.saveButtonText}>Lưu vào ảnh</Text>
         </TouchableOpacity>
+        {(finalStatus === 'Pending' || finalStatus === 'pending' || finalStatus === 0) && (
+          <TouchableOpacity style={styles.cancelButton} onPress={handleCancelBooking}>
+            <Text style={styles.cancelButtonText}>Hủy lịch đặt</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -148,17 +272,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   qrLabel: { fontSize: 11, color: '#9ca3af', fontWeight: '700', letterSpacing: 1, marginBottom: 12 },
-  qrGrid: {
-    width: 140,
-    height: 140,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  qrWrapper: {
+    padding: 10,
     backgroundColor: '#fff',
     borderRadius: 8,
-    padding: 6,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
-  qrCell: { width: '14.28%', height: '14.28%' },
-  qrCellFilled: { backgroundColor: '#111827' },
   bookingCode: {
     fontSize: 15,
     fontWeight: '700',
@@ -220,6 +340,16 @@ const styles = StyleSheet.create({
     borderRadius: 14,
   },
   saveButtonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  cancelButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fee2e2',
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 12,
+  },
+  cancelButtonText: { color: '#ef4444', fontWeight: '700', fontSize: 15 },
 });
 
 export default TicketDetailScreen;

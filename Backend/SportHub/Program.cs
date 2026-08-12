@@ -8,7 +8,9 @@ using SportHub.Repositories.Implementations;
 using SportHub.Repositories.Interfaces;
 using SportHub.Services.Implementations;
 using SportHub.Services.Interfaces;
+using System.Security.Claims;
 using System.Text;
+using SportHub.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,10 +35,22 @@ builder.Services.AddScoped<IServiceItemService, ServiceItemService>();
 builder.Services.AddScoped<ISportCenterService, SportCenterService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IJwtHelper, JwtHelper>();
+builder.Services.AddMemoryCache();
 
 // Add services to the container.
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll",
+        builder => builder
+            .SetIsOriginAllowed(_ => true)
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials());
+});
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 //builder.Services.AddSwaggerGen();
@@ -80,7 +94,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+        RoleClaimType = ClaimTypes.Role
+    };
+    
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            var accessToken = context.Request.Query["access_token"];
+            var path = context.HttpContext.Request.Path;
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/notifications"))
+            {
+                context.Token = accessToken;
+            }
+            return Task.CompletedTask;
+        }
     };
 });
 builder.Services.AddAuthorization();
@@ -179,7 +208,23 @@ using (var scope = app.Services.CreateScope())
             Description = "Trung tâm thể thao đa năng với nhiều loại sân.",
             Status = SportCenterStatus.Active,
             CreatedAt = DateTime.Parse("2026-08-05T00:00:00")
-        }
+        },
+        new SportCenters
+        {
+            Id = Guid.Parse("00000000-0000-0000-0000-000000000102"),
+            Name = "Cụm sân bóng Chảo Lửa",
+            Address = "30 Phan Thúc Duyện, Tân Bình, TP.HCM",
+            Description = "Cụm sân cỏ nhân tạo siêu đẹp, chuyên tổ chức các giải phủi.",
+            Status = SportCenterStatus.Active,
+            CreatedAt = DateTime.Parse("2026-08-11T00:00:00")
+        },
+        new SportCenters { Id = Guid.Parse("00000000-0000-0000-0000-000000000103"), Name = "Basketball Hoop Dreams", Address = "10 Phạm Ngọc Thạch, Quận 3", Description = "Sân bóng rổ trong nhà đạt chuẩn thi đấu.", Status = SportCenterStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new SportCenters { Id = Guid.Parse("00000000-0000-0000-0000-000000000104"), Name = "Sân Cầu Lông Kỳ Hòa", Address = "828 Sư Vạn Hạnh, Quận 10", Description = "Cụm 10 sân cầu lông thảm tiêu chuẩn.", Status = SportCenterStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new SportCenters { Id = Guid.Parse("00000000-0000-0000-0000-000000000105"), Name = "Hồ bơi Yết Kiêu", Address = "1 Nguyễn Thị Minh Khai, Quận 1", Description = "Hồ bơi thi đấu dài 50m, nước trong vắt.", Status = SportCenterStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new SportCenters { Id = Guid.Parse("00000000-0000-0000-0000-000000000106"), Name = "Trung tâm Bóng chuyền", Address = "123 An Dương Vương, Quận 5", Description = "Nhà thi đấu bóng chuyền có khán đài.", Status = SportCenterStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new SportCenters { Id = Guid.Parse("00000000-0000-0000-0000-000000000107"), Name = "CLB Tennis Lan Anh", Address = "291 CMT8, Quận 10", Description = "Sân đất nện và sân cứng cao cấp.", Status = SportCenterStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new SportCenters { Id = Guid.Parse("00000000-0000-0000-0000-000000000108"), Name = "Sân Golf Him Lam", Address = "234 Ngô Tất Tố, Bình Thạnh", Description = "Sân tập Golf (Driving Range) view sông Sài Gòn.", Status = SportCenterStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new SportCenters { Id = Guid.Parse("00000000-0000-0000-0000-000000000109"), Name = "CLB Bóng bàn Hoa Lư", Address = "2 Đinh Tiên Hoàng, Quận 1", Description = "Nhiều bàn bóng bàn chất lượng, có robot bắn bóng.", Status = SportCenterStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") }
     };
 
     foreach (var sportCenter in sportCenters)
@@ -195,7 +240,16 @@ using (var scope = app.Services.CreateScope())
     {
         new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000200"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000100"), Name = "Sân 1", Type = "Badminton", PricePerSlot = 120000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-05T00:00:00") },
         new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000201"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000100"), Name = "Sân 2", Type = "Football", PricePerSlot = 250000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-05T00:00:00") },
-        new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000202"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000101"), Name = "Sân 3", Type = "Tennis", PricePerSlot = 180000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-05T00:00:00") }
+        new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000202"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000101"), Name = "Sân 3", Type = "Tennis", PricePerSlot = 180000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-05T00:00:00") },
+        new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000203"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000102"), Name = "Sân bóng 5 người - Số 1", Type = "Football", PricePerSlot = 300000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000204"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000102"), Name = "Sân bóng 7 người - Số 2", Type = "Football", PricePerSlot = 600000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000205"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000103"), Name = "Sân bóng rổ số 1", Type = "Basketball", PricePerSlot = 400000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000206"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000104"), Name = "Sân cầu lông A", Type = "Badminton", PricePerSlot = 150000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000207"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000105"), Name = "Làn bơi số 3", Type = "Swimming", PricePerSlot = 80000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000208"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000106"), Name = "Sân bóng chuyền chính", Type = "Volleyball", PricePerSlot = 300000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000209"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000107"), Name = "Sân đất nện 1", Type = "Tennis", PricePerSlot = 250000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000210"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000108"), Name = "Line tập số 10", Type = "Golf", PricePerSlot = 500000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") },
+        new Fields { Id = Guid.Parse("00000000-0000-0000-0000-000000000211"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000109"), Name = "Bàn bóng bàn VVIP", Type = "Table Tennis", PricePerSlot = 100000, Status = FieldStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") }
     };
 
     foreach (var field in fields)
@@ -302,15 +356,28 @@ using (var scope = app.Services.CreateScope())
 
     var images = new[]
     {
-        new SportCenterImages { Id = Guid.Parse("00000000-0000-0000-0000-000000000800"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000100"), Url = "https://example.com/images/champions-arena-1.jpg" },
-        new SportCenterImages { Id = Guid.Parse("00000000-0000-0000-0000-000000000801"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000101"), Url = "https://example.com/images/elite-sports-hub-1.jpg" }
+        new SportCenterImages { Id = Guid.Parse("00000000-0000-0000-0000-000000000800"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000100"), Url = "http://10.0.2.2:5286/images/champions-arena-1.jpg?v=2" },
+        new SportCenterImages { Id = Guid.Parse("00000000-0000-0000-0000-000000000801"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000101"), Url = "http://10.0.2.2:5286/images/elite-sports-hub-1.jpg?v=2" },
+        new SportCenterImages { Id = Guid.Parse("00000000-0000-0000-0000-000000000802"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000102"), Url = "http://10.0.2.2:5286/images/stadium-3.jpg?v=2" },
+        new SportCenterImages { Id = Guid.Parse("00000000-0000-0000-0000-000000000803"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000103"), Url = "http://10.0.2.2:5286/images/stadium-4.jpg?v=2" },
+        new SportCenterImages { Id = Guid.Parse("00000000-0000-0000-0000-000000000804"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000104"), Url = "http://10.0.2.2:5286/images/stadium-5.jpg?v=2" },
+        new SportCenterImages { Id = Guid.Parse("00000000-0000-0000-0000-000000000805"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000105"), Url = "http://10.0.2.2:5286/images/stadium-6.jpg?v=2" },
+        new SportCenterImages { Id = Guid.Parse("00000000-0000-0000-0000-000000000806"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000106"), Url = "http://10.0.2.2:5286/images/stadium-7.jpg?v=2" },
+        new SportCenterImages { Id = Guid.Parse("00000000-0000-0000-0000-000000000807"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000107"), Url = "http://10.0.2.2:5286/images/stadium-8.jpg?v=2" },
+        new SportCenterImages { Id = Guid.Parse("00000000-0000-0000-0000-000000000808"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000108"), Url = "http://10.0.2.2:5286/images/stadium-9.jpg?v=2" },
+        new SportCenterImages { Id = Guid.Parse("00000000-0000-0000-0000-000000000809"), SportCenterId = Guid.Parse("00000000-0000-0000-0000-000000000109"), Url = "http://10.0.2.2:5286/images/stadium-10.jpg?v=2" }
     };
 
     foreach (var image in images)
     {
-        if (!db.SportCenterImages.Any(i => i.Id == image.Id || (i.SportCenterId == image.SportCenterId && i.Url == image.Url)))
+        var existing = db.SportCenterImages.FirstOrDefault(i => i.Id == image.Id);
+        if (existing == null)
         {
             db.SportCenterImages.Add(image);
+        }
+        else
+        {
+            existing.Url = image.Url;
         }
     }
     db.SaveChanges();
@@ -321,9 +388,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+app.UseStaticFiles();
 app.UseMiddleware<SportHub.Middleware.ExceptionMiddleware>();
+app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notifications");
 app.Run();

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportHub.DTOs.Booking;
 using SportHub.Services.Interfaces;
@@ -36,7 +36,7 @@ namespace SportHub.Controllers
             return Ok(booking);
         }
 
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Admin")]
         [HttpPost]
         public async Task<ActionResult<BookingResponseDto>> Create([FromBody] CreateBookingDto bookingDto)
         {
@@ -52,7 +52,7 @@ namespace SportHub.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "User")]
+        [Authorize(Roles = "User,Admin")]
         [HttpDelete("{bookingId:guid}")]
         public async Task<IActionResult> Cancel(Guid bookingId)
         {
@@ -60,7 +60,7 @@ namespace SportHub.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,User")]
         [HttpGet("user/{userId:guid}")]
         public async Task<ActionResult<List<BookingResponseDto>>> GetByUser(Guid userId)
         {
@@ -90,6 +90,14 @@ namespace SportHub.Controllers
         {
             var bookings = await _bookingService.GetBookingsByDateRangeAsync(startDate, endDate);
             return Ok(bookings);
+        }
+
+        [AllowAnonymous]
+        [HttpGet("booked-slots")]
+        public async Task<ActionResult<List<Guid>>> GetBookedSlots([FromQuery] Guid fieldId, [FromQuery] DateOnly date)
+        {
+            var slots = await _bookingService.GetBookedSlotIdsAsync(fieldId, date);
+            return Ok(slots);
         }
     }
 }

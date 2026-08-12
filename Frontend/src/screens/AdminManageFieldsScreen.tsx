@@ -1,21 +1,20 @@
-import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Alert, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useIsFocused } from '@react-navigation/native';
+import { sportCentersApi } from '../api/sportCentersApi';
+import { fieldsApi } from '../api/fieldsApi';
 
 interface AdminField {
-  id: string;
+  id: string; // SportCenterId
   name: string;
   address: string;
   price: string;
   status: 'open' | 'closed';
+  imageUrl?: string;
+  description?: string;
 }
-
-const INITIAL_FIELDS: AdminField[] = [
-  { id: 'F1', name: 'Sân Cầu Lông A1', address: 'Quận 7, TP.HCM', price: '120.000đ/giờ', status: 'open' },
-  { id: 'F2', name: 'Sân Bóng đá Mini B2', address: 'Quận 10, TP.HCM', price: '450.000đ/giờ', status: 'open' },
-  { id: 'F3', name: 'Sân Tennis T1', address: 'Quận 3, TP.HCM', price: '280.000đ/giờ', status: 'closed' },
-];
 
 const TABS = [
   { key: 'all', label: 'Tất cả' },
@@ -24,9 +23,47 @@ const TABS = [
 ] as const;
 
 const AdminManageFieldsScreen = ({ navigation }: { navigation: any }) => {
-  const [fields, setFields] = useState(INITIAL_FIELDS);
+  const [fields, setFields] = useState<AdminField[]>([]);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'all' | 'open' | 'closed'>('all');
   const [query, setQuery] = useState('');
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    if (isFocused) {
+      loadData();
+    }
+  }, [isFocused]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const sportCenters = await sportCentersApi.getAll();
+      const mappedData: AdminField[] = [];
+
+      for (const sc of sportCenters) {
+        // Fetch field for price
+        const scFields = await fieldsApi.getBySportCenter(sc.sportCenterId);
+        const price = scFields.length > 0 ? `${scFields[0].pricePerSlot.toLocaleString('vi-VN')}đ/giờ` : 'Chưa có giá';
+        
+        mappedData.push({
+          id: sc.sportCenterId,
+          name: sc.name,
+          address: sc.address,
+          description: sc.description ?? undefined,
+          imageUrl: sc.images && sc.images.length > 0 ? sc.images[0].url : undefined,
+          price: price,
+          status: 'open',
+        });
+      }
+      setFields(mappedData);
+    } catch (error) {
+      console.error('Failed to load fields', error);
+      Alert.alert('Lỗi', 'Không thể tải danh sách sân.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = fields.filter((f) => {
     const matchesTab = tab === 'all' || f.status === tab;
@@ -37,7 +74,20 @@ const AdminManageFieldsScreen = ({ navigation }: { navigation: any }) => {
   const handleDelete = (id: string, name: string) => {
     Alert.alert('Xóa sân', `Bạn có chắc muốn xóa "${name}"?`, [
       { text: 'Hủy', style: 'cancel' },
-      { text: 'Xóa', style: 'destructive', onPress: () => setFields((prev) => prev.filter((f) => f.id !== id)) },
+      { 
+        text: 'Xóa', 
+        style: 'destructive', 
+        onPress: async () => {
+          try {
+            await sportCentersApi.delete(id);
+            setFields((prev) => prev.filter((f) => f.id !== id));
+            Alert.alert('Thành công', 'Đã xóa sân.');
+          } catch (error) {
+            console.error('Failed to delete field', error);
+            Alert.alert('Lỗi', 'Không thể xóa sân này.');
+          }
+        } 
+      },
     ]);
   };
 
@@ -82,15 +132,25 @@ const AdminManageFieldsScreen = ({ navigation }: { navigation: any }) => {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons name="business-outline" size={44} color="#d1d5db" />
-            <Text style={styles.emptyText}>Chưa có sân nào</Text>
+            {loading ? (
+              <ActivityIndicator size="large" color="#006e2f" />
+            ) : (
+              <>
+                <Ionicons name="business-outline" size={44} color="#d1d5db" />
+                <Text style={styles.emptyText}>Chưa có sân nào</Text>
+              </>
+            )}
           </View>
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
-            <View style={styles.thumb}>
-              <Ionicons name="tennisball-outline" size={22} color="#22c55e" />
-            </View>
+            {item.imageUrl ? (
+              <Image source={{ uri: item.imageUrl.startsWith('http') ? item.imageUrl : `http://10.0.2.2:5115${item.imageUrl}` }} style={styles.thumb} />
+            ) : (
+              <View style={styles.thumb}>
+                <Ionicons name="business-outline" size={22} color="#22c55e" />
+              </View>
+            )}
             <View style={{ flex: 1 }}>
               <View style={styles.cardHeaderRow}>
                 <Text style={styles.fieldName} numberOfLines={1}>{item.name}</Text>
