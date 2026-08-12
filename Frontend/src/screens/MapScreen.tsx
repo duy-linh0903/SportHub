@@ -23,9 +23,16 @@ const MapScreen = ({ navigation, route }: { navigation: any, route: any }) => {
   const getCurrentLocation = () => {
     Geolocation.getCurrentPosition(
       (position) => {
+        let lat = position.coords.latitude;
+        let lng = position.coords.longitude;
+        // If the location is outside Vietnam (e.g., emulator default at Googleplex), fallback to HCMC
+        if (lat < 8 || lat > 24 || lng < 102 || lng > 110) {
+          lat = 10.762622;
+          lng = 106.660172;
+        }
         setUserLocation({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
+          latitude: lat,
+          longitude: lng,
         });
       },
       (error) => {
