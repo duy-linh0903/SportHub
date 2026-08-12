@@ -19,12 +19,15 @@ class NotificationService {
       .build();
 
     this.hubConnection.on('ReceiveNotification', async (title: string, body: string, bookingId: string) => {
+      const { useAuthStore } = require('../store/useAuthStore');
+      const userId = useAuthStore.getState().userId;
+      
       useNotificationStore.getState().addNotification({
         type: 'booking',
         title: title,
         message: body,
         bookingId: bookingId,
-      });
+      }, userId);
       await this.displayLocalNotification(title, body, bookingId);
     });
 

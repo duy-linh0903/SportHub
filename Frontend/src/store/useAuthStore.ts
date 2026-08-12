@@ -12,6 +12,8 @@ interface AuthState {
   initialize: () => Promise<void>;
 }
 
+import { useNotificationStore } from './useNotificationStore';
+
 export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   role: null,

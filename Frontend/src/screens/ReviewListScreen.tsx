@@ -128,15 +128,7 @@ const ReviewListScreen = ({ navigation, route }: { navigation: any; route: any }
         }
       />
 
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.writeButton}
-          onPress={() => navigation.navigate('WriteReview', { field: { name: fieldName, sportCenterId } })}
-        >
-          <Ionicons name="create-outline" size={18} color="#fff" />
-          <Text style={styles.writeButtonText}>Viết đánh giá</Text>
-        </TouchableOpacity>
-      </View>
+
     </SafeAreaView>
   );
 };
@@ -202,19 +194,8 @@ const styles = StyleSheet.create({
   avatarText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   userName: { fontSize: 13, fontWeight: '700', color: '#111827' },
   reviewMeta: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
-  reviewDate: { fontSize: 11, color: '#9ca3af' },
-  reviewComment: { fontSize: 13, color: '#374151', lineHeight: 19 },
-  footer: { padding: 16, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
-  writeButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#22c55e',
-    paddingVertical: 14,
-    borderRadius: 14,
-  },
-  writeButtonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  reviewDate: { fontSize: 12, color: '#9ca3af', marginLeft: 8 },
+  reviewComment: { fontSize: 14, color: '#374151', lineHeight: 20 },
 });
 
 export default ReviewListScreen;

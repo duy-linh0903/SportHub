@@ -8,9 +8,11 @@ namespace SportHub.Services.Implementations
     public class ReviewService : IReviewService
     {
         private readonly IReviewRepository _reviewRepository;
-        public ReviewService(IReviewRepository reviewRepository)
+        private readonly IBookingRepository _bookingRepository;
+        public ReviewService(IReviewRepository reviewRepository, IBookingRepository bookingRepository)
         {
             _reviewRepository = reviewRepository;
+            _bookingRepository = bookingRepository;
         }
 
         public async Task<List<ReviewResponseDto>> GetReviewsBySportCenterAsync(Guid sportCenterId)
@@ -32,6 +34,16 @@ namespace SportHub.Services.Implementations
 
         public async Task<ReviewResponseDto> CreateReviewAsync(CreateReviewDto reviewDto, Guid userId)
         {
+            var booking = await _bookingRepository.GetByIdAsync(reviewDto.BookingId);
+            if (booking == null)
+                throw new Exception("Booking không tồn tại.");
+            
+            if (booking.UserId != userId)
+                throw new Exception("Bạn không có quyền đánh giá Booking này.");
+
+            if (booking.Status != BookingStatus.Completed)
+                throw new Exception("Chỉ có thể đánh giá sân sau khi đã sử dụng thành công (Check-in).");
+
             var review = new Reviews
             {
                 Rating = reviewDto.Rating,

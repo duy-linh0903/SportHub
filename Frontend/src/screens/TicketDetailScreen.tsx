@@ -234,6 +234,18 @@ const TicketDetailScreen = ({ navigation, route }: { navigation: any; route: any
             <Text style={styles.cancelButtonText}>Hủy lịch đặt</Text>
           </TouchableOpacity>
         )}
+        {(finalStatus === 'Completed' || finalStatus === 'completed' || finalStatus === 3) && (
+          <TouchableOpacity 
+            style={styles.reviewButton} 
+            onPress={() => navigation.navigate('WriteReview', { 
+              field: { name: finalVenueName, sportCenterId: booking?.sportCenterId || passedField?.sportCenterId },
+              bookingId: bookingCode 
+            })}
+          >
+            <Ionicons name="create-outline" size={18} color="#22c55e" />
+            <Text style={styles.reviewButtonText}>Viết đánh giá</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -350,6 +362,19 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   cancelButtonText: { color: '#ef4444', fontWeight: '700', fontSize: 15 },
+  reviewButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: '#22c55e',
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 12,
+  },
+  reviewButtonText: { color: '#22c55e', fontWeight: '700', fontSize: 15 },
 });
 
 export default TicketDetailScreen;

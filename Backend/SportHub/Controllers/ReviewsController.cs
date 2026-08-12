@@ -26,8 +26,15 @@ namespace SportHub.Controllers
         [HttpPost]
         public async Task<ActionResult<ReviewResponseDto>> Create([FromBody] CreateReviewDto dto)
         {
-            var result = await _reviewService.CreateReviewAsync(dto, dto.UserId);
-            return Created(string.Empty, result);
+            try
+            {
+                var result = await _reviewService.CreateReviewAsync(dto, dto.UserId);
+                return Created(string.Empty, result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

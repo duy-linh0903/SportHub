@@ -5,6 +5,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNotificationStore, AppNotification } from '../store/useNotificationStore';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { useAuthStore } from '../store/useAuthStore';
 
 const ICON_MAP: Record<AppNotification['type'], { icon: string; bg: string; color: string }> = {
   booking: { icon: 'calendar-outline', bg: '#e6f4ea', color: '#22c55e' },
@@ -14,6 +15,9 @@ const ICON_MAP: Record<AppNotification['type'], { icon: string; bg: string; colo
 
 const NotificationScreen = ({ navigation }: { navigation: any }) => {
   const { notifications, markAsRead, clearAll } = useNotificationStore();
+  const { userId } = useAuthStore();
+
+  const userNotifications = notifications.filter(n => n.userId === userId);
 
   const formatTime = (isoString: string) => {
     try {
@@ -30,13 +34,13 @@ const NotificationScreen = ({ navigation }: { navigation: any }) => {
           <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: '#1a1a1a' }]}>Thông báo</Text>
-        <TouchableOpacity onPress={clearAll}>
+        <TouchableOpacity onPress={() => clearAll(userId || undefined)}>
           <Ionicons name="trash-outline" size={22} color="#666" />
         </TouchableOpacity>
       </View>
 
       <FlatList
-        data={notifications}
+        data={userNotifications}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         ListEmptyComponent={

@@ -122,7 +122,9 @@ const BookingScreen = ({ navigation }: { navigation: any }) => {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Lịch đặt sân</Text>
-        <Ionicons name="notifications-outline" size={22} color="#1a1a1a" />
+        <TouchableOpacity onPress={() => navigation.navigate('Notification')}>
+          <Ionicons name="notifications-outline" size={22} color="#1a1a1a" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.searchBar}>

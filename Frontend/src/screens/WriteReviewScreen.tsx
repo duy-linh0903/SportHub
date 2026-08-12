@@ -45,18 +45,25 @@ const WriteReviewScreen = ({ navigation, route }: { navigation: any; route: any 
         return;
       }
 
+      if (!route?.params?.bookingId) {
+        Alert.alert('Thông báo', 'Không tìm thấy thông tin vé đặt sân. Bạn chỉ có thể đánh giá từ màn hình chi tiết vé đã hoàn thành.');
+        setSubmitting(false);
+        return;
+      }
+
       await reviewsApi.create({
         userId,
         sportCenterId: field.sportCenterId,
-        bookingId: route?.params?.bookingId || '00000000-0000-0000-0000-000000000500', // Use existing bookingId for UI testing fallback
+        bookingId: route.params.bookingId,
         rating,
         comment,
       });
       Alert.alert('Thông báo', 'Đánh giá của bạn đã được gửi!');
       navigation.goBack();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting review', error);
-      Alert.alert('Thông báo', 'Gửi đánh giá thất bại. Vui lòng thử lại sau.');
+      const errorMsg = error.response?.data?.message || 'Gửi đánh giá thất bại. Vui lòng thử lại sau.';
+      Alert.alert('Thông báo', errorMsg);
       setSubmitting(false);
     }
   };

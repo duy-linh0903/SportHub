@@ -194,13 +194,6 @@ const DetailScreen = ({ route, navigation }: Props) => {
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={styles.writeReviewButton}
-            onPress={() => navigation.navigate('WriteReview', { field: { name: sportCenter.name, sportCenterId: sportCenter.sportCenterId } })}
-          >
-            <Ionicons name="create-outline" size={18} color="#22c55e" />
-            <Text style={styles.writeReviewText}>Viết đánh giá của bạn</Text>
-          </TouchableOpacity>
         </View>
 
       </ScrollView>
@@ -273,17 +266,6 @@ const styles = StyleSheet.create({
   readMoreText: { color: '#22c55e', fontWeight: 'bold', fontSize: 14 },
   reviewSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   seeAllText: { color: '#1E40AF', fontWeight: '600', fontSize: 13 },
-  writeReviewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderWidth: 1.5,
-    borderColor: '#22c55e',
-    borderRadius: 12,
-    paddingVertical: 12,
-  },
-  writeReviewText: { color: '#22c55e', fontWeight: 'bold', fontSize: 14 },
   bottomBar: {
     position: 'absolute',
     bottom: 0,

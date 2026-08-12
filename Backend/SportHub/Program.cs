@@ -38,6 +38,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IJwtHelper, JwtHelper>();
 builder.Services.AddMemoryCache();
+builder.Services.AddHostedService<SportHub.Services.BackgroundServices.AutoCancelBookingService>();
 
 // Add services to the container.
 builder.Services.AddCors(options =>

@@ -96,7 +96,6 @@ const MapScreen = ({ navigation, route }: { navigation: any, route: any }) => {
     <head>
       <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
       <style>
         body, html { padding: 0; margin: 0; width: 100%; height: 100%; overflow: hidden; }
         #map { width: 100%; height: 100%; }
@@ -114,67 +113,71 @@ const MapScreen = ({ navigation, route }: { navigation: any, route: any }) => {
         };
       </script>
       <div id="map"></div>
+      
       <script>
-        var map = L.map('map').setView([${targetLat}, ${targetLng}], ${targetZoom});
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 19,
-          attribution: '© OpenStreetMap'
-        }).addTo(map);
+        function initMap() {
+          var map = L.map('map').setView([${targetLat}, ${targetLng}], ${targetZoom});
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+          }).addTo(map);
 
-        var userIcon = L.icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
-        });
+          var userIcon = L.icon({
+              iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+              shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+              iconSize: [25, 41],
+              iconAnchor: [12, 41],
+              popupAnchor: [1, -34],
+              shadowSize: [41, 41]
+          });
 
-        L.marker([${userLocation.latitude}, ${userLocation.longitude}], {icon: userIcon}).addTo(map)
-          .bindPopup("<b>Vị trí của bạn</b>");
+          L.marker([${userLocation.latitude}, ${userLocation.longitude}], {icon: userIcon}).addTo(map)
+            .bindPopup("<b>Vị trí của bạn</b>");
 
-        var centers = ${JSON.stringify(
-          sportCenters.map((c, i) => {
-            const coords = getMockCoordinates(c.sportCenterId, i);
-            return {
-              id: c.sportCenterId,
-              lat: coords.latitude,
-              lng: coords.longitude,
-              name: c.name,
-              address: c.address
+          var centers = ${JSON.stringify(
+            sportCenters.map((c, i) => {
+              const coords = getMockCoordinates(c.sportCenterId, i);
+              return {
+                id: c.sportCenterId,
+                lat: coords.latitude,
+                lng: coords.longitude,
+                name: c.name,
+                address: c.address
+              };
+            })
+          )};
+
+          centers.forEach(function(c) {
+            var marker = L.marker([c.lat, c.lng]).addTo(map);
+            
+            var container = document.createElement('div');
+            container.className = 'custom-popup';
+            
+            var title = document.createElement('div');
+            title.className = 'title';
+            title.textContent = c.name;
+            container.appendChild(title);
+            
+            var address = document.createElement('div');
+            address.className = 'address';
+            address.textContent = c.address;
+            container.appendChild(address);
+            
+            var btn = document.createElement('button');
+            btn.textContent = 'Xem chi tiết';
+            btn.onclick = function() {
+              window.ReactNativeWebView.postMessage(c.id);
             };
-          })
-        )};
-
-        centers.forEach(function(c) {
-          var marker = L.marker([c.lat, c.lng]).addTo(map);
-          
-          var container = document.createElement('div');
-          container.className = 'custom-popup';
-          
-          var title = document.createElement('div');
-          title.className = 'title';
-          title.textContent = c.name;
-          container.appendChild(title);
-          
-          var address = document.createElement('div');
-          address.className = 'address';
-          address.textContent = c.address;
-          container.appendChild(address);
-          
-          var btn = document.createElement('button');
-          btn.textContent = 'Xem chi tiết';
-          btn.onclick = function() {
-            window.ReactNativeWebView.postMessage(c.id);
-          };
-          container.appendChild(btn);
-          
-          marker.bindPopup(container);
-          if (c.id === '${targetId}') {
-            marker.openPopup();
-          }
-        });
+            container.appendChild(btn);
+            
+            marker.bindPopup(container);
+            if (c.id === '${targetId}') {
+              marker.openPopup();
+            }
+          });
+        }
       </script>
+      <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onload="initMap()"></script>
     </body>
     </html>
   `;

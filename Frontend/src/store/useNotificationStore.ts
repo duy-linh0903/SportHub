@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 export interface AppNotification {
   id: string;
+  userId?: string;
   type: 'booking' | 'promo' | 'system';
   title: string;
   message: string;
@@ -14,16 +15,16 @@ export interface AppNotification {
 
 interface NotificationState {
   notifications: AppNotification[];
-  addNotification: (notification: Omit<AppNotification, 'id' | 'time' | 'read'>) => void;
+  addNotification: (notification: Omit<AppNotification, 'id' | 'time' | 'read' | 'userId'>, userId?: string) => void;
   markAsRead: (id: string) => void;
-  clearAll: () => void;
+  clearAll: (userId?: string) => void;
 }
 
 export const useNotificationStore = create<NotificationState>()(
   persist(
     (set) => ({
       notifications: [],
-      addNotification: (notification) =>
+      addNotification: (notification, userId) =>
         set((state) => ({
           notifications: [
             {
@@ -31,6 +32,7 @@ export const useNotificationStore = create<NotificationState>()(
               id: Date.now().toString(),
               time: new Date().toISOString(),
               read: false,
+              userId: userId,
             },
             ...state.notifications,
           ],
@@ -41,7 +43,10 @@ export const useNotificationStore = create<NotificationState>()(
             n.id === id ? { ...n, read: true } : n
           ),
         })),
-      clearAll: () => set({ notifications: [] }),
+      clearAll: (userId) => 
+        set((state) => ({
+          notifications: userId ? state.notifications.filter(n => n.userId !== userId && n.userId !== undefined) : [],
+        })),
     }),
     {
       name: 'notification-storage',
