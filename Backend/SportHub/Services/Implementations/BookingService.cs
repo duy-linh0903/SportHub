@@ -1,10 +1,9 @@
 using System.Linq;
 using SportHub.DTOs.Booking;
+using SportHub.DTOs.Service;
 using SportHub.Models;
 using SportHub.Repositories.Interfaces;
 using SportHub.Services.Interfaces;
-using Microsoft.AspNetCore.SignalR;
-using SportHub.Hubs;
 
 namespace SportHub.Services.Implementations
 {
@@ -14,20 +13,17 @@ namespace SportHub.Services.Implementations
         private readonly IFieldRepository _fieldRepository;
         private readonly IServiceRepository _serviceRepository;
         private readonly IUserRepository _userRepository;
-        private readonly IHubContext<NotificationHub> _hubContext;
 
         public BookingService(
             IBookingRepository bookingRepository,
             IFieldRepository fieldRepository,
             IServiceRepository serviceRepository,
-            IUserRepository userRepository,
-            IHubContext<NotificationHub> hubContext)
+            IUserRepository userRepository)
         {
             _bookingRepository = bookingRepository;
             _fieldRepository = fieldRepository;
             _serviceRepository = serviceRepository;
             _userRepository = userRepository;
-            _hubContext = hubContext;
         }
 
         public async Task<List<BookingResponseDto>> GetAllBookingsAsync()
@@ -41,13 +37,20 @@ namespace SportHub.Services.Implementations
             var booking = await _bookingRepository.GetByIdAsync(id);
             if (booking == null)
             {
-                throw new KeyNotFoundException("Booking isn't found");
+                return null;
             }
             return BookingServiceDto(booking);
         }
 
         public async Task<BookingResponseDto> CreateBookingAsync(CreateBookingDto bookingDto, Guid userId)
         {
+            if (bookingDto == null)
+            {
+                throw new ArgumentNullException(nameof(bookingDto));
+            }
+
+            bookingDto.ServiceList ??= new List<BookingServiceRequestDto>();
+
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
             {
@@ -139,10 +142,6 @@ namespace SportHub.Services.Implementations
 
             await _bookingRepository.CreateBookingWithDetailsAsync(booking, bookingServices, bookingSlots);
 
-            string title = "Đặt sân thành công";
-            string body = $"Bạn đã đặt sân thành công. Mã Check-in của bạn là: {booking.CheckInCode}";
-            await _hubContext.Clients.Group(userId.ToString()).SendAsync("ReceiveNotification", title, body, booking.Id);
-
             return BookingServiceDto(booking);
         }
 
@@ -154,13 +153,21 @@ namespace SportHub.Services.Implementations
                 throw new KeyNotFoundException("Booking isn't found");
             }
 
-            await _bookingRepository.UpdateStatusAsync(bookingId, status.ToString());
+            var validTransitions = new Dictionary<BookingStatus, BookingStatus[]>
+            {
+                [BookingStatus.Pending] = new[] { BookingStatus.Confirmed, BookingStatus.Cancelled },
+                [BookingStatus.Confirmed] = new[] { BookingStatus.Completed, BookingStatus.Cancelled },
+                [BookingStatus.Completed] = Array.Empty<BookingStatus>(),
+                [BookingStatus.Cancelled] = Array.Empty<BookingStatus>(),
+                [BookingStatus.Deleted] = Array.Empty<BookingStatus>()
+            };
 
-            string title = status == BookingStatus.Cancelled ? "Lịch đặt bị hủy" : 
-                           status == BookingStatus.Confirmed ? "Lịch đặt đã xác nhận" : "Cập nhật lịch đặt";
-            string body = $"Lịch đặt sân của bạn đã được chuyển sang trạng thái: {status}";
-            
-            await _hubContext.Clients.Group(booking.UserId.ToString()).SendAsync("ReceiveNotification", title, body, bookingId);
+            if (!validTransitions.TryGetValue(booking.Status, out var allowedStatuses) || !allowedStatuses.Contains(status))
+            {
+                throw new InvalidOperationException($"Booking status cannot change from {booking.Status} to {status}.");
+            }
+
+            await _bookingRepository.UpdateStatusAsync(bookingId, status.ToString());
         }
 
         public async Task CancelBookingAsync(Guid bookingId)
@@ -204,16 +211,6 @@ namespace SportHub.Services.Implementations
 
         public BookingResponseDto BookingServiceDto(Bookings booking)
         {
-            string timeSlotsStr = string.Empty;
-            if (booking.BookingSlots != null && booking.BookingSlots.Any())
-            {
-                var times = booking.BookingSlots
-                    .Where(bs => bs.TimeSlots != null)
-                    .OrderBy(bs => bs.TimeSlots.StartTime)
-                    .Select(bs => $"{bs.TimeSlots.StartTime.ToString("HH:mm")} - {bs.TimeSlots.EndTime.ToString("HH:mm")}");
-                timeSlotsStr = string.Join(", ", times);
-            }
-
             return new BookingResponseDto
             {
                 BookingId = booking.Id,
@@ -223,13 +220,7 @@ namespace SportHub.Services.Implementations
                 Status = booking.Status,
                 TotalPrice = booking.TotalPrice,
                 CheckInCode = booking.CheckInCode,
-                CreatedAt = booking.CreatedAt,
-                FieldName = booking.Fields?.Name ?? string.Empty,
-                FieldType = booking.Fields?.Type ?? string.Empty,
-                SportCenterId = booking.Fields?.SportCenterId ?? Guid.Empty,
-                SportCenterName = booking.Fields?.SportCenter?.Name ?? string.Empty,
-                SportCenterAddress = booking.Fields?.SportCenter?.Address ?? string.Empty,
-                TimeSlots = timeSlotsStr
+                CreatedAt = booking.CreatedAt
             };
         }
 

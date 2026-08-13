@@ -37,7 +37,7 @@ namespace SportHub.Services.Implementations
             var booking = await _bookingRepository.GetByIdAsync(reviewDto.BookingId);
             if (booking == null)
                 throw new Exception("Booking không tồn tại.");
-            
+
             if (booking.UserId != userId)
                 throw new Exception("Bạn không có quyền đánh giá Booking này.");
 
@@ -48,7 +48,7 @@ namespace SportHub.Services.Implementations
             {
                 Rating = reviewDto.Rating,
                 Comment = reviewDto.Comment,
-                UserId = reviewDto.UserId,
+                UserId = userId,
                 SportCenterId = reviewDto.SportCenterId,
                 BookingId = reviewDto.BookingId
             };

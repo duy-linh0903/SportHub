@@ -23,21 +23,13 @@ namespace SportHub.Services.Implementations
         public async Task<UserResponseDto?> GetUserByIdAsync(Guid id)
         {
             var user = await _userRepository.GetByIdAsync(id);
-            if (user == null)
-            {
-                throw new KeyNotFoundException("User isn't found");
-            }
-            return MapToResponse(user);
+            return user == null ? null : MapToResponse(user);
         }
 
         public async Task<UserResponseDto?> GetUserByEmailAsync(string email)
         {
             var user = await _userRepository.GetByEmailAsync(email);
-            if (user == null)
-            {
-                throw new KeyNotFoundException("User isn't found");
-            }
-            return MapToResponse(user);
+            return user == null ? null : MapToResponse(user);
         }
 
         public async Task<bool> EmailExistsAsync(string email)

@@ -35,6 +35,7 @@ namespace SportHub.Repositories.Implementations
             var field = await _context.Fields.FirstOrDefaultAsync(f => f.Id == updateField.Id);
             if (field != null)
             {
+                field.SportCenterId = updateField.SportCenterId;
                 field.Name = updateField.Name;
                 field.Type = updateField.Type;
                 field.PricePerSlot = updateField.PricePerSlot;

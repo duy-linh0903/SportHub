@@ -47,32 +47,6 @@ namespace SportHub.Migrations
                     b.HasIndex("ServiceId");
 
                     b.ToTable("BookingServices");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000600"),
-                            BookingId = new Guid("00000000-0000-0000-0000-000000000500"),
-                            Price = 100000.0,
-                            Quantity = 2,
-                            ServiceId = new Guid("00000000-0000-0000-0000-000000000300")
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000601"),
-                            BookingId = new Guid("00000000-0000-0000-0000-000000000500"),
-                            Price = 30000.0,
-                            Quantity = 1,
-                            ServiceId = new Guid("00000000-0000-0000-0000-000000000301")
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000602"),
-                            BookingId = new Guid("00000000-0000-0000-0000-000000000501"),
-                            Price = 150000.0,
-                            Quantity = 1,
-                            ServiceId = new Guid("00000000-0000-0000-0000-000000000302")
-                        });
                 });
 
             modelBuilder.Entity("SportHub.Models.BookingSlots", b =>
@@ -83,23 +57,16 @@ namespace SportHub.Migrations
                     b.Property<Guid>("SlotId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("BookingsId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.HasKey("BookingId", "SlotId");
+
+                    b.HasIndex("BookingsId");
 
                     b.HasIndex("SlotId");
 
                     b.ToTable("BookingSlots");
-
-                    b.HasData(
-                        new
-                        {
-                            BookingId = new Guid("00000000-0000-0000-0000-000000000500"),
-                            SlotId = new Guid("00000000-0000-0000-0000-000000000403")
-                        },
-                        new
-                        {
-                            BookingId = new Guid("00000000-0000-0000-0000-000000000501"),
-                            SlotId = new Guid("00000000-0000-0000-0000-000000000404")
-                        });
                 });
 
             modelBuilder.Entity("SportHub.Models.Bookings", b =>
@@ -120,6 +87,9 @@ namespace SportHub.Migrations
                     b.Property<Guid>("FieldId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid>("SlotId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -132,35 +102,12 @@ namespace SportHub.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("FieldId");
-
                     b.HasIndex("UserId");
 
-                    b.ToTable("Bookings");
+                    b.HasIndex("FieldId", "BookingDate", "SlotId")
+                        .IsUnique();
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000500"),
-                            BookingDate = new DateOnly(2026, 8, 10),
-                            CheckInCode = "CHK001",
-                            CreatedAt = new DateTime(2026, 8, 5, 10, 0, 0, 0, DateTimeKind.Unspecified),
-                            FieldId = new Guid("00000000-0000-0000-0000-000000000200"),
-                            Status = "Confirmed",
-                            TotalPrice = 240000.0,
-                            UserId = new Guid("00000000-0000-0000-0000-000000000011")
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000501"),
-                            BookingDate = new DateOnly(2026, 8, 11),
-                            CheckInCode = "CHK002",
-                            CreatedAt = new DateTime(2026, 8, 5, 11, 30, 0, 0, DateTimeKind.Unspecified),
-                            FieldId = new Guid("00000000-0000-0000-0000-000000000201"),
-                            Status = "Pending",
-                            TotalPrice = 500000.0,
-                            UserId = new Guid("00000000-0000-0000-0000-000000000011")
-                        });
+                    b.ToTable("Bookings");
                 });
 
             modelBuilder.Entity("SportHub.Models.Fields", b =>
@@ -183,6 +130,9 @@ namespace SportHub.Migrations
                     b.Property<Guid>("SportCenterId")
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<Guid?>("SportCentersId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -196,39 +146,9 @@ namespace SportHub.Migrations
 
                     b.HasIndex("SportCenterId");
 
-                    b.ToTable("Fields");
+                    b.HasIndex("SportCentersId");
 
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000200"),
-                            CreatedAt = new DateTime(2026, 8, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Name = "Sân 1",
-                            PricePerSlot = 120000.0,
-                            SportCenterId = new Guid("00000000-0000-0000-0000-000000000100"),
-                            Status = "Active",
-                            Type = "Badminton"
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000201"),
-                            CreatedAt = new DateTime(2026, 8, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Name = "Sân 2",
-                            PricePerSlot = 250000.0,
-                            SportCenterId = new Guid("00000000-0000-0000-0000-000000000100"),
-                            Status = "Active",
-                            Type = "Football"
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000202"),
-                            CreatedAt = new DateTime(2026, 8, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Name = "Sân 3",
-                            PricePerSlot = 180000.0,
-                            SportCenterId = new Guid("00000000-0000-0000-0000-000000000101"),
-                            Status = "Active",
-                            Type = "Tennis"
-                        });
+                    b.ToTable("Fields");
                 });
 
             modelBuilder.Entity("SportHub.Models.Reviews", b =>
@@ -265,18 +185,6 @@ namespace SportHub.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Reviews");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000700"),
-                            BookingId = new Guid("00000000-0000-0000-0000-000000000500"),
-                            Comment = "Sân rất đẹp và dễ đặt lịch.",
-                            CreatedAt = new DateTime(2026, 8, 6, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Rating = 5,
-                            SportCenterId = new Guid("00000000-0000-0000-0000-000000000100"),
-                            UserId = new Guid("00000000-0000-0000-0000-000000000011")
-                        });
                 });
 
             modelBuilder.Entity("SportHub.Models.Roles", b =>
@@ -292,18 +200,6 @@ namespace SportHub.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Roles");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000002"),
-                            RoleName = "Admin"
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000001"),
-                            RoleName = "User"
-                        });
                 });
 
             modelBuilder.Entity("SportHub.Models.ServiceItem", b =>
@@ -335,44 +231,6 @@ namespace SportHub.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("ServiceItem");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000300"),
-                            Description = "Dịch vụ thuê bóng",
-                            Name = "Đá bóng",
-                            Price = 50000.0,
-                            Status = "Active",
-                            Type = "Equipment"
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000301"),
-                            Description = "Dịch vụ thuê vợt và shuttlecock",
-                            Name = "Cầu lông",
-                            Price = 30000.0,
-                            Status = "Active",
-                            Type = "Equipment"
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000302"),
-                            Description = "Buổi tư vấn kỹ thuật",
-                            Name = "Tư vấn huấn luyện",
-                            Price = 150000.0,
-                            Status = "Active",
-                            Type = "Coach"
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000303"),
-                            Description = "Sử dụng phòng thay đồ",
-                            Name = "Phòng thay đồ",
-                            Price = 20000.0,
-                            Status = "Active",
-                            Type = "Facility"
-                        });
                 });
 
             modelBuilder.Entity("SportHub.Models.SportCenterImages", b =>
@@ -393,20 +251,6 @@ namespace SportHub.Migrations
                     b.HasIndex("SportCenterId");
 
                     b.ToTable("SportCenterImages");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000800"),
-                            SportCenterId = new Guid("00000000-0000-0000-0000-000000000100"),
-                            Url = "https://example.com/images/champions-arena-1.jpg"
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000801"),
-                            SportCenterId = new Guid("00000000-0000-0000-0000-000000000101"),
-                            Url = "https://example.com/images/elite-sports-hub-1.jpg"
-                        });
                 });
 
             modelBuilder.Entity("SportHub.Models.SportCenters", b =>
@@ -437,26 +281,6 @@ namespace SportHub.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("SportCenters");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000100"),
-                            Address = "123 Nguyễn Huệ, Quận 1",
-                            CreatedAt = new DateTime(2026, 8, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Sân thể thao hiện đại, phù hợp cho bóng đá và cầu lông.",
-                            Name = "Champions Arena",
-                            Status = "Active"
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000101"),
-                            Address = "456 Lê Văn Sỹ, Quận 3",
-                            CreatedAt = new DateTime(2026, 8, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Description = "Trung tâm thể thao đa năng với nhiều loại sân.",
-                            Name = "Elite Sports Hub",
-                            Status = "Active"
-                        });
                 });
 
             modelBuilder.Entity("SportHub.Models.TimeSlots", b =>
@@ -474,92 +298,6 @@ namespace SportHub.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("TimeSlots");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000400"),
-                            EndTime = new TimeOnly(8, 0, 0),
-                            StartTime = new TimeOnly(7, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000401"),
-                            EndTime = new TimeOnly(9, 0, 0),
-                            StartTime = new TimeOnly(8, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000402"),
-                            EndTime = new TimeOnly(10, 0, 0),
-                            StartTime = new TimeOnly(9, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000403"),
-                            EndTime = new TimeOnly(11, 0, 0),
-                            StartTime = new TimeOnly(10, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000404"),
-                            EndTime = new TimeOnly(12, 0, 0),
-                            StartTime = new TimeOnly(11, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000405"),
-                            EndTime = new TimeOnly(13, 0, 0),
-                            StartTime = new TimeOnly(12, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000406"),
-                            EndTime = new TimeOnly(14, 0, 0),
-                            StartTime = new TimeOnly(13, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000407"),
-                            EndTime = new TimeOnly(15, 0, 0),
-                            StartTime = new TimeOnly(14, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000408"),
-                            EndTime = new TimeOnly(16, 0, 0),
-                            StartTime = new TimeOnly(15, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000409"),
-                            EndTime = new TimeOnly(17, 0, 0),
-                            StartTime = new TimeOnly(16, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-00000000040a"),
-                            EndTime = new TimeOnly(18, 0, 0),
-                            StartTime = new TimeOnly(17, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-00000000040b"),
-                            EndTime = new TimeOnly(19, 0, 0),
-                            StartTime = new TimeOnly(18, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-00000000040c"),
-                            EndTime = new TimeOnly(20, 0, 0),
-                            StartTime = new TimeOnly(19, 0, 0)
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-00000000040d"),
-                            EndTime = new TimeOnly(21, 0, 0),
-                            StartTime = new TimeOnly(20, 0, 0)
-                        });
                 });
 
             modelBuilder.Entity("SportHub.Models.UserRoles", b =>
@@ -575,18 +313,6 @@ namespace SportHub.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("UserRoles");
-
-                    b.HasData(
-                        new
-                        {
-                            UserId = new Guid("00000000-0000-0000-0000-000000000010"),
-                            RoleId = new Guid("00000000-0000-0000-0000-000000000002")
-                        },
-                        new
-                        {
-                            UserId = new Guid("00000000-0000-0000-0000-000000000011"),
-                            RoleId = new Guid("00000000-0000-0000-0000-000000000001")
-                        });
                 });
 
             modelBuilder.Entity("SportHub.Models.Users", b =>
@@ -627,30 +353,6 @@ namespace SportHub.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000010"),
-                            AvatarUrl = "",
-                            CreatedAt = new DateTime(2026, 8, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "admin@sporthub.com",
-                            Name = "Admin",
-                            PasswordHash = "$2a$11$uz06z8VxEPvhfyqmmc4AWOlEOuop6plfNQmwFh6ywMXQ7pQ4gCkby",
-                            PhoneNumber = "0123456789",
-                            Status = "Active"
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0000-000000000011"),
-                            AvatarUrl = "",
-                            CreatedAt = new DateTime(2026, 8, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            Email = "user@sporthub.com",
-                            Name = "User",
-                            PasswordHash = "$2a$11$Vr/QawYUa.Mc9Yy87sdSI.yeRpjOEoWDkRDvOK84OKCgPjZNjqtvm",
-                            PhoneNumber = "0987654321",
-                            Status = "Active"
-                        });
                 });
 
             modelBuilder.Entity("SportHub.Models.BookingServices", b =>
@@ -679,6 +381,10 @@ namespace SportHub.Migrations
                         .HasForeignKey("BookingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("SportHub.Models.Bookings", null)
+                        .WithMany("BookingSlots")
+                        .HasForeignKey("BookingsId");
 
                     b.HasOne("SportHub.Models.TimeSlots", "TimeSlots")
                         .WithMany()
@@ -718,6 +424,10 @@ namespace SportHub.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SportHub.Models.SportCenters", null)
+                        .WithMany("Fields")
+                        .HasForeignKey("SportCentersId");
+
                     b.Navigation("SportCenter");
                 });
 
@@ -751,7 +461,7 @@ namespace SportHub.Migrations
             modelBuilder.Entity("SportHub.Models.SportCenterImages", b =>
                 {
                     b.HasOne("SportHub.Models.SportCenters", "sportCenter")
-                        .WithMany()
+                        .WithMany("Images")
                         .HasForeignKey("SportCenterId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -776,6 +486,18 @@ namespace SportHub.Migrations
                     b.Navigation("Roles");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SportHub.Models.Bookings", b =>
+                {
+                    b.Navigation("BookingSlots");
+                });
+
+            modelBuilder.Entity("SportHub.Models.SportCenters", b =>
+                {
+                    b.Navigation("Fields");
+
+                    b.Navigation("Images");
                 });
 #pragma warning restore 612, 618
         }

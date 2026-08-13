@@ -22,6 +22,10 @@ namespace SportHub.Services.Implementations
         public async Task<ServiceResponseDto?> GetServiceByIdAsync(Guid id)
         {
             var service = await _serviceRepository.GetByIdAsync(id);
+            if (service == null)
+            {
+                return null;
+            }
             return ServicesDto(service);
         }
 

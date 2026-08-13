@@ -37,9 +37,9 @@ namespace SportHub.Services.Implementations
         public async Task<SportCenterResponseDto?> GetSportCenterByIdAsync(Guid id)
         {
             var sportCenter = await _sportCenter.GetByIdAsync(id);
-            if (sportCenter==null)
+            if (sportCenter == null)
             {
-                throw new KeyNotFoundException("Sport Center isn't found");
+                return null;
             }
             return new SportCenterResponseDto
             {
@@ -48,7 +48,8 @@ namespace SportHub.Services.Implementations
                 Address = sportCenter.Address,
                 Description = sportCenter.Description,
                 CreatedAt = sportCenter.CreatedAt,
-                images = sportCenter.Images?.ToList()
+                images = sportCenter.Images?.ToList(),
+                MinPrice = sportCenter.Fields != null && sportCenter.Fields.Any() ? sportCenter.Fields.Min(f => f.PricePerSlot) : 0
             };
         }
 
@@ -58,7 +59,11 @@ namespace SportHub.Services.Implementations
             {
                 Name = sportCenterDto.Name,
                 Address = sportCenterDto.Address,
-                Description = sportCenterDto.Description
+                Description = sportCenterDto.Description,
+                Images = sportCenterDto.images?.Select(image => new SportCenterImages
+                {
+                    Url = image.Url
+                }).ToList() ?? new List<SportCenterImages>()
             };
             await _sportCenter.AddAsync(sportCenter);
             return new SportCenterResponseDto
@@ -82,6 +87,11 @@ namespace SportHub.Services.Implementations
             sportCenter.Name = sportCenterDto.Name;
             sportCenter.Address = sportCenterDto.Address;
             sportCenter.Description = sportCenterDto.Description;
+            sportCenter.Images = sportCenterDto.images?.Select(image => new SportCenterImages
+            {
+                Url = image.Url,
+                SportCenterId = id
+            }).ToList() ?? sportCenter.Images ?? new List<SportCenterImages>();
             await _sportCenter.UpdateAsync(sportCenter);
             return new SportCenterResponseDto
             {
@@ -101,7 +111,7 @@ namespace SportHub.Services.Implementations
             {
                 throw new KeyNotFoundException("Sport center isn't found");
             }
-            sportCenter.Status = SportCenterStatus.Deleted;
+            await _sportCenter.DeleteAsync(id);
         }
 
         public async Task<List<SportCenterResponseDto>> SearchSportCentersAsync(string name)

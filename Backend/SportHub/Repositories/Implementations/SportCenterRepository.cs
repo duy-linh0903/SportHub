@@ -38,6 +38,7 @@ namespace SportHub.Repositories.Implementations
                 sport.Name = updateSport.Name;
                 sport.Address = updateSport.Address;
                 sport.Description = updateSport.Description;
+                sport.Images = updateSport.Images;
                 await _context.SaveChangesAsync();
             }
         }

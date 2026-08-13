@@ -48,9 +48,10 @@ namespace SportHub.Repositories.Implementations
             {
                 user.Name = updateUser.Name;
                 user.PhoneNumber = updateUser.PhoneNumber;
+                user.Email = updateUser.Email;
+                user.AvatarUrl = updateUser.AvatarUrl;
                 await _context.SaveChangesAsync();
             }
-            ;
         }
 
         public async Task UpdatePasswordAsync(Guid userId, string passwordHash)
