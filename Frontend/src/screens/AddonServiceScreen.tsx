@@ -19,12 +19,14 @@ const AddonServiceScreen = ({ navigation, route }: { navigation: any; route: any
 
   useEffect(() => {
     fetchServices();
-  }, []);
+  }, [route?.params?.bookingData?.sportCenterId]);
 
   const fetchServices = async () => {
     setLoading(true);
     try {
-      const data = await servicesApi.getAll();
+      const sportCenterId = route?.params?.bookingData?.sportCenterId;
+      if (!sportCenterId) return;
+      const data = await servicesApi.getBySportCenter(sportCenterId);
       setServices(data);
     } catch (error) {
       console.error('Failed to fetch services:', error);

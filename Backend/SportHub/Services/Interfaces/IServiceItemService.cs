@@ -10,5 +10,6 @@ namespace SportHub.Services.Interfaces
         Task<ServiceResponseDto?> UpdateServiceAsync(Guid id, UpdateServiceDto serviceDto);
         Task DeleteServiceAsync(Guid id);
         Task<List<ServiceResponseDto>> GetServicesByFieldTypeAsync(string fieldType);
+        Task<List<ServiceResponseDto>> GetServicesBySportCenterAsync(Guid sportCenterId);
     }
 }

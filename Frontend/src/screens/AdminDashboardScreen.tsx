@@ -1,32 +1,87 @@
-import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
-const STATS = [
-  { label: 'Tổng lượt đặt', value: '1,284', icon: 'calendar-outline' },
-  { label: 'Doanh thu tháng', value: '45.2M', icon: 'cash-outline' },
-];
-
-const CHART_DATA = [40, 55, 35, 70, 60, 85, 50];
-const CHART_LABELS = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
-const MAX_CHART_VALUE = 100;
-
-interface Activity {
-  id: string;
-  fieldName: string;
-  address: string;
-  time: string;
-  status: 'pending' | 'confirmed';
-  price: string;
-}
-
-const RECENT_ACTIVITY: Activity[] = [
-  { id: '1', fieldName: 'Sân bóng đá Thống Nhất', address: 'Quận 10, TP.HCM', time: '20:00, 15 Thg 8, 2024', status: 'pending', price: '450.000đ' },
-  { id: '2', fieldName: 'Sân Cầu Lông A1', address: 'Quận 7, TP.HCM', time: '18:00 - 20:00', status: 'confirmed', price: '200.000đ' },
-];
+import { bookingsApi } from '../api/bookingsApi';
+import { BookingResponseDto } from '../types/api';
+import { useIsFocused } from '@react-navigation/native';
 
 const AdminDashboardScreen = ({ navigation }: { navigation: any }) => {
+  const [bookings, setBookings] = useState<BookingResponseDto[]>([]);
+  const [loading, setLoading] = useState(true);
+  const isFocused = useIsFocused();
+
+  useEffect(() => {
+    if (isFocused) {
+      loadData();
+    }
+  }, [isFocused]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const data = await bookingsApi.getByOwner();
+      setBookings(data);
+    } catch (error) {
+      console.error('Failed to load dashboard data', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#22c55e" />
+      </View>
+    );
+  }
+
+  const totalBookings = bookings.length;
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  
+  const monthlyRevenue = bookings
+    .filter(b => {
+      const date = new Date(b.createdAt);
+      return date.getMonth() === currentMonth && 
+             date.getFullYear() === currentYear &&
+             (b.status === 'Confirmed' || b.status === 'Completed' || b.status === 'Pending');
+    })
+    .reduce((sum, b) => sum + b.totalPrice, 0);
+
+  const formatRevenue = (amount: number) => {
+    if (amount >= 1000000) return `${(amount / 1000000).toFixed(1)}M`;
+    if (amount >= 1000) return `${(amount / 1000).toFixed(0)}K`;
+    return `${amount}`;
+  };
+
+  const STATS = [
+    { label: 'Tổng lượt đặt', value: totalBookings.toLocaleString(), icon: 'calendar-outline' },
+    { label: 'Doanh thu tháng', value: formatRevenue(monthlyRevenue), icon: 'cash-outline' },
+  ];
+
+  const chartData = [0, 0, 0, 0, 0, 0, 0];
+  const now = new Date();
+  bookings.forEach(b => {
+    const d = new Date(b.createdAt);
+    const diffTime = Math.abs(now.getTime() - d.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    if (diffDays <= 7) {
+      chartData[d.getDay()] += 1;
+    }
+  });
+  
+  const orderedChartData = [
+    chartData[1], chartData[2], chartData[3], chartData[4], 
+    chartData[5], chartData[6], chartData[0]
+  ];
+  const orderedChartLabels = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+  const maxChartValue = Math.max(...orderedChartData, 10);
+  const recentBookings = [...bookings]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
@@ -36,7 +91,7 @@ const AdminDashboardScreen = ({ navigation }: { navigation: any }) => {
         </View>
         <TouchableOpacity 
           style={styles.avatarBtn}
-          onPress={() => navigation.navigate('AdminProfile')} // Thêm dòng này
+          onPress={() => navigation.navigate('AdminProfile')}
         >
           <Text style={styles.avatarText}>A</Text>
         </TouchableOpacity>
@@ -54,15 +109,25 @@ const AdminDashboardScreen = ({ navigation }: { navigation: any }) => {
         </View>
 
         <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Lượt đặt trong tuần</Text>
+          <Text style={styles.chartTitle}>Lượt đặt 7 ngày qua</Text>
           <View style={styles.chartRow}>
-            {CHART_DATA.map((value, i) => (
+            {orderedChartData.map((value, i) => (
               <View key={i} style={styles.chartBarWrap}>
-                <View style={[styles.chartBar, { height: (value / MAX_CHART_VALUE) * 90 }]} />
-                <Text style={styles.chartLabel}>{CHART_LABELS[i]}</Text>
+                <View style={[styles.chartBar, { height: (value / maxChartValue) * 90 }]} />
+                <Text style={styles.chartLabel}>{orderedChartLabels[i]}</Text>
               </View>
             ))}
           </View>
+        </View>
+
+        <View style={styles.actionRow}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('AdminReviewList')}
+          >
+            <Ionicons name="star" size={20} color="#EAB308" />
+            <Text style={styles.actionButtonText}>Đánh giá của khách</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.sectionHeaderRow}>
@@ -72,35 +137,41 @@ const AdminDashboardScreen = ({ navigation }: { navigation: any }) => {
           </TouchableOpacity>
         </View>
 
-        {RECENT_ACTIVITY.map((item) => (
-          <View key={item.id} style={styles.activityCard}>
+        {recentBookings.map((item) => (
+          <TouchableOpacity 
+            key={item.bookingId} 
+            style={styles.activityCard}
+            onPress={() => navigation.navigate('TicketDetail', { bookingCode: item.bookingId })}
+          >
             <View style={styles.activityThumb}>
               <Ionicons name="tennisball-outline" size={20} color="#22c55e" />
             </View>
             <View style={{ flex: 1 }}>
               <View style={styles.activityHeaderRow}>
-                <Text style={styles.activityName} numberOfLines={1}>{item.fieldName}</Text>
+                <Text style={styles.activityName} numberOfLines={1}>
+                  {item.sportCenterName && item.fieldName ? `${item.sportCenterName} - ${item.fieldName}` : item.fieldName || item.sportCenterName}
+                </Text>
                 <View
                   style={[
                     styles.statusBadge,
-                    { backgroundColor: item.status === 'pending' ? '#fff7ed' : '#e6f4ea' },
+                    { backgroundColor: item.status === 'Pending' ? '#fff7ed' : item.status === 'Cancelled' ? '#fef2f2' : '#e6f4ea' },
                   ]}
                 >
                   <Text
                     style={[
                       styles.statusText,
-                      { color: item.status === 'pending' ? '#F97316' : '#22c55e' },
+                      { color: item.status === 'Pending' ? '#F97316' : item.status === 'Cancelled' ? '#ef4444' : '#22c55e' },
                     ]}
                   >
-                    {item.status === 'pending' ? 'CHỜ DUYỆT' : 'ĐÃ XÁC NHẬN'}
+                    {item.status === 'Pending' ? 'CHỜ DUYỆT' : (item.status === 'Confirmed' ? 'ĐÃ XÁC NHẬN' : item.status.toUpperCase())}
                   </Text>
                 </View>
               </View>
-              <Text style={styles.activityMeta}>{item.address}</Text>
-              <Text style={styles.activityMeta}>{item.time}</Text>
-              <Text style={styles.activityPrice}>{item.price}</Text>
+              <Text style={styles.activityMeta}>{item.sportCenterAddress}</Text>
+              <Text style={styles.activityMeta}>{item.timeSlots} - {item.bookingDate}</Text>
             </View>
-          </View>
+            <Text style={styles.activityPrice}>{item.totalPrice.toLocaleString('vi-VN')}đ</Text>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -108,85 +179,109 @@ const AdminDashboardScreen = ({ navigation }: { navigation: any }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f2f4f6' },
+  container: { flex: 1, backgroundColor: '#f8fafc' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 10,
+    paddingBottom: 20,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: '#f1f5f9',
   },
-  headerGreeting: { fontSize: 12, color: '#666' },
-  headerTitle: { fontSize: 18, fontWeight: 'bold', color: '#1a1a1a' },
+  headerGreeting: { fontSize: 14, color: '#64748b', marginBottom: 4 },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: '#0f172a' },
   avatarBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#22c55e',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  content: { padding: 16, paddingBottom: 32 },
-  statsRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
+  avatarText: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  content: { padding: 20 },
+  statsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
   statCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  statValue: { fontSize: 20, fontWeight: 'bold', color: '#1a1a1a', marginTop: 8 },
-  statLabel: { fontSize: 12, color: '#666', marginTop: 2 },
-  chartCard: {
+    width: '48%',
     backgroundColor: '#fff',
     borderRadius: 16,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  chartTitle: { fontSize: 14, fontWeight: '700', color: '#1a1a1a', marginBottom: 16 },
-  chartRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 110 },
-  chartBarWrap: { alignItems: 'center', gap: 6 },
-  chartBar: { width: 18, borderRadius: 6, backgroundColor: '#22c55e' },
-  chartLabel: { fontSize: 10, color: '#9ca3af' },
+  statValue: { fontSize: 24, fontWeight: '700', color: '#0f172a', marginTop: 12, marginBottom: 4 },
+  statLabel: { fontSize: 13, color: '#64748b' },
+  chartCard: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  chartTitle: { fontSize: 16, fontWeight: '600', color: '#0f172a', marginBottom: 20 },
+  chartRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', height: 120 },
+  chartBarWrap: { alignItems: 'center', width: 30 },
+  chartBar: { width: 8, backgroundColor: '#22c55e', borderRadius: 4, marginBottom: 10 },
+  chartLabel: { fontSize: 12, color: '#64748b' },
+  actionRow: { marginBottom: 24 },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  actionButtonText: { marginLeft: 12, fontSize: 16, fontWeight: '600', color: '#0f172a' },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
-  seeAllText: { fontSize: 12, color: '#1E40AF', fontWeight: '600' },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
+  seeAllText: { fontSize: 14, color: '#22c55e', fontWeight: '500' },
   activityCard: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 12,
-    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   activityThumb: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: 12,
-    backgroundColor: '#e6f4ea',
+    backgroundColor: '#f0fdf4',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 16,
   },
-  activityHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 4 },
-  activityName: { fontSize: 13, fontWeight: '700', color: '#1a1a1a', flex: 1 },
-  statusBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
-  statusText: { fontSize: 9, fontWeight: 'bold' },
-  activityMeta: { fontSize: 11, color: '#666', marginBottom: 2 },
-  activityPrice: { fontSize: 13, fontWeight: 'bold', color: '#006e2f', marginTop: 4 },
+  activityHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  activityName: { fontSize: 15, fontWeight: '600', color: '#0f172a', flex: 1, marginRight: 8 },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  statusText: { fontSize: 10, fontWeight: '700' },
+  activityMeta: { fontSize: 13, color: '#64748b', marginBottom: 2 },
+  activityPrice: { fontSize: 15, fontWeight: '700', color: '#0f172a', position: 'absolute', bottom: 16, right: 16 },
 });
 
 export default AdminDashboardScreen;

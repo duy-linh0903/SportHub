@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../../App';
 import { fieldsApi } from '../api/fieldsApi';
 import { bookingsApi } from '../api/bookingsApi';
+import { slotsApi, TimeSlotDto } from '../api/slotsApi';
 import { FieldResponseDto, SportCenterResponseDto } from '../types/api';
 import { sportCentersApi } from '../api/sportCentersApi';
 import { format, addDays } from 'date-fns';
@@ -40,24 +41,14 @@ const generateDates = () => {
 };
 const DATES = generateDates();
 
-// Generate 14 time slots based on backend seed data (07:00 to 21:00)
-const TIME_SLOTS = Array.from({ length: 14 }).map((_, index) => {
-  const hex = (0x400 + index).toString(16).padStart(12, '0');
-  const id = `00000000-0000-0000-0000-${hex}`;
-  const start = 7 + index;
-  const end = 8 + index;
-  return {
-    id,
-    time: `${start.toString().padStart(2, '0')}:00 - ${end.toString().padStart(2, '0')}:00`,
-    start,
-    end
-  };
-});
+// We will fetch time slots from the API instead of hardcoding them
+// const TIME_SLOTS = ...
 
 const SelectTimeScreen = ({ route, navigation }: Props) => {
   const sportCenterId = route.params?.sportCenterId;
   const [sportCenter, setSportCenter] = useState<SportCenterResponseDto | null>(null);
   const [fields, setFields] = useState<FieldResponseDto[]>([]);
+  const [timeSlots, setTimeSlots] = useState<{ id: string; time: string; start: number; end: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [selectedDate, setSelectedDate] = useState(DATES[0]);
@@ -68,8 +59,29 @@ const SelectTimeScreen = ({ route, navigation }: Props) => {
   useEffect(() => {
     if (sportCenterId) {
       fetchFields();
+      fetchTimeSlots();
     }
   }, [sportCenterId]);
+
+  const fetchTimeSlots = async () => {
+    try {
+      if (!sportCenterId) return;
+      const slots = await slotsApi.getBySportCenter(sportCenterId);
+      const formattedSlots = slots.map(slot => {
+        const start = parseInt(slot.startTime.split(':')[0], 10);
+        const end = parseInt(slot.endTime.split(':')[0], 10);
+        return {
+          id: slot.id,
+          time: `${slot.startTime.substring(0, 5)} - ${slot.endTime.substring(0, 5)}`,
+          start,
+          end
+        };
+      });
+      setTimeSlots(formattedSlots);
+    } catch (error) {
+      console.error('Failed to fetch time slots:', error);
+    }
+  };
 
   useEffect(() => {
     if (selectedField && selectedDate) {
@@ -209,7 +221,7 @@ const SelectTimeScreen = ({ route, navigation }: Props) => {
           </View>
 
           <View style={styles.slotsGrid}>
-            {TIME_SLOTS.map((slot) => {
+            {timeSlots.map((slot) => {
               const isSelected = selectedSlots.includes(slot.id);
               const isBookedOriginal = bookedSlots.includes(slot.id); 
               
@@ -254,7 +266,7 @@ const SelectTimeScreen = ({ route, navigation }: Props) => {
           style={[styles.continueButton, selectedSlots.length === 0 && styles.buttonDisabled]}
           disabled={selectedSlots.length === 0}
           onPress={() => {
-            const selectedTimeSlots = TIME_SLOTS.filter(s => selectedSlots.includes(s.id));
+            const selectedTimeSlots = timeSlots.filter(s => selectedSlots.includes(s.id));
             let timeString = '';
             if (selectedTimeSlots.length > 0) {
               const start = Math.min(...selectedTimeSlots.map(s => s.start));

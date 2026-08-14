@@ -323,6 +323,9 @@ namespace SportHub.Migrations
                     b.Property<double>("Price")
                         .HasColumnType("float");
 
+                    b.Property<Guid?>("SportCenterId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -333,6 +336,8 @@ namespace SportHub.Migrations
                         .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SportCenterId");
 
                     b.ToTable("ServiceItem");
 
@@ -430,11 +435,16 @@ namespace SportHub.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<Guid?>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("SportCenters");
 
@@ -468,10 +478,15 @@ namespace SportHub.Migrations
                     b.Property<TimeOnly>("EndTime")
                         .HasColumnType("time");
 
+                    b.Property<Guid?>("SportCenterId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<TimeOnly>("StartTime")
                         .HasColumnType("time");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("SportCenterId");
 
                     b.ToTable("TimeSlots");
 
@@ -636,7 +651,7 @@ namespace SportHub.Migrations
                             CreatedAt = new DateTime(2026, 8, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Email = "admin@sporthub.com",
                             Name = "Admin",
-                            PasswordHash = "$2a$11$uz06z8VxEPvhfyqmmc4AWOlEOuop6plfNQmwFh6ywMXQ7pQ4gCkby",
+                            PasswordHash = "$2a$11$Xtr6DdthQBq1WtwTDQ3Lr.4gzArv34A4/sp7bK8jVjgwa3wsq84Yy",
                             PhoneNumber = "0123456789",
                             Status = "Active"
                         },
@@ -647,7 +662,7 @@ namespace SportHub.Migrations
                             CreatedAt = new DateTime(2026, 8, 5, 0, 0, 0, 0, DateTimeKind.Unspecified),
                             Email = "user@sporthub.com",
                             Name = "User",
-                            PasswordHash = "$2a$11$Vr/QawYUa.Mc9Yy87sdSI.yeRpjOEoWDkRDvOK84OKCgPjZNjqtvm",
+                            PasswordHash = "$2a$11$KrDcAJ6qFoxkp/ansLcO6.7FjMMO55b.yR1AopsCJIB8zq2zvZL7y",
                             PhoneNumber = "0987654321",
                             Status = "Active"
                         });
@@ -675,7 +690,7 @@ namespace SportHub.Migrations
             modelBuilder.Entity("SportHub.Models.BookingSlots", b =>
                 {
                     b.HasOne("SportHub.Models.Bookings", "Bookings")
-                        .WithMany()
+                        .WithMany("BookingSlots")
                         .HasForeignKey("BookingId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -713,7 +728,7 @@ namespace SportHub.Migrations
             modelBuilder.Entity("SportHub.Models.Fields", b =>
                 {
                     b.HasOne("SportHub.Models.SportCenters", "SportCenter")
-                        .WithMany()
+                        .WithMany("Fields")
                         .HasForeignKey("SportCenterId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -748,15 +763,42 @@ namespace SportHub.Migrations
                     b.Navigation("Users");
                 });
 
+            modelBuilder.Entity("SportHub.Models.ServiceItem", b =>
+                {
+                    b.HasOne("SportHub.Models.SportCenters", "SportCenter")
+                        .WithMany()
+                        .HasForeignKey("SportCenterId");
+
+                    b.Navigation("SportCenter");
+                });
+
             modelBuilder.Entity("SportHub.Models.SportCenterImages", b =>
                 {
                     b.HasOne("SportHub.Models.SportCenters", "sportCenter")
-                        .WithMany()
+                        .WithMany("Images")
                         .HasForeignKey("SportCenterId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("sportCenter");
+                });
+
+            modelBuilder.Entity("SportHub.Models.SportCenters", b =>
+                {
+                    b.HasOne("SportHub.Models.Users", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId");
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("SportHub.Models.TimeSlots", b =>
+                {
+                    b.HasOne("SportHub.Models.SportCenters", "SportCenter")
+                        .WithMany()
+                        .HasForeignKey("SportCenterId");
+
+                    b.Navigation("SportCenter");
                 });
 
             modelBuilder.Entity("SportHub.Models.UserRoles", b =>
@@ -776,6 +818,18 @@ namespace SportHub.Migrations
                     b.Navigation("Roles");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SportHub.Models.Bookings", b =>
+                {
+                    b.Navigation("BookingSlots");
+                });
+
+            modelBuilder.Entity("SportHub.Models.SportCenters", b =>
+                {
+                    b.Navigation("Fields");
+
+                    b.Navigation("Images");
                 });
 #pragma warning restore 612, 618
         }

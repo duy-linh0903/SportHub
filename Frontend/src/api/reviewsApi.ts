@@ -11,4 +11,9 @@ export const reviewsApi = {
     const response = await axiosClient.post<ReviewResponseDto>('/api/reviews', data);
     return response.data;
   },
+
+  getByOwner: async () => {
+    const response = await axiosClient.get<ReviewResponseDto[]>('/api/reviews/owner');
+    return response.data;
+  },
 };

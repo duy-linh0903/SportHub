@@ -35,7 +35,7 @@ const AdminBookingListScreen = ({ navigation }: { navigation: any }) => {
   const fetchBookings = async () => {
     setLoading(true);
     try {
-      const allBookings = await bookingsApi.getAll();
+      const allBookings = await bookingsApi.getByOwner();
       const allFields = await fieldsApi.getAll();
       
       const fieldMap = new Map<string, FieldResponseDto>();
@@ -55,9 +55,9 @@ const AdminBookingListScreen = ({ navigation }: { navigation: any }) => {
         mappedBookings.push({
           id: b.bookingId,
           customerName: customerName,
-          fieldName: field ? field.name : 'Sân thể thao',
+          fieldName: (b.sportCenterName && (b.fieldName || field?.name)) ? `${b.sportCenterName} - ${b.fieldName || field?.name}` : (b.fieldName || field?.name || b.sportCenterName || 'Sân thể thao'),
           date: b.bookingDate,
-          time: '',
+          time: b.timeSlots || '',
           price: `${b.totalPrice.toLocaleString('vi-VN')}đ`,
           status: b.status,
           originalData: b

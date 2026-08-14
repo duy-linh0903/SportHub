@@ -38,7 +38,7 @@ const AdminManageFieldsScreen = ({ navigation }: { navigation: any }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const sportCenters = await sportCentersApi.getAll();
+      const sportCenters = await sportCentersApi.getByOwner();
       const mappedData: AdminField[] = [];
 
       for (const sc of sportCenters) {
@@ -53,7 +53,7 @@ const AdminManageFieldsScreen = ({ navigation }: { navigation: any }) => {
           description: sc.description ?? undefined,
           imageUrl: sc.images && sc.images.length > 0 ? sc.images[0].url : undefined,
           price: price,
-          status: 'open',
+          status: (sc as any).status === 'Deleted' || (sc as any).status === 'Inactive' ? 'closed' : 'open',
         });
       }
       setFields(mappedData);
@@ -80,11 +80,31 @@ const AdminManageFieldsScreen = ({ navigation }: { navigation: any }) => {
         onPress: async () => {
           try {
             await sportCentersApi.delete(id);
-            setFields((prev) => prev.filter((f) => f.id !== id));
-            Alert.alert('Thành công', 'Đã xóa sân.');
+            setFields((prev) => prev.map((f) => f.id === id ? { ...f, status: 'closed' } : f));
+            Alert.alert('Thành công', 'Sân đã được chuyển sang mục đã đóng.');
           } catch (error) {
             console.error('Failed to delete field', error);
             Alert.alert('Lỗi', 'Không thể xóa sân này.');
+          }
+        } 
+      },
+    ]);
+  };
+
+  const handleRestore = (id: string, name: string) => {
+    Alert.alert('Khôi phục sân', `Bạn có chắc muốn mở lại "${name}"?`, [
+      { text: 'Hủy', style: 'cancel' },
+      { 
+        text: 'Khôi phục', 
+        style: 'default', 
+        onPress: async () => {
+          try {
+            await sportCentersApi.restore(id);
+            setFields((prev) => prev.map((f) => f.id === id ? { ...f, status: 'open' } : f));
+            Alert.alert('Thành công', 'Sân đã được mở lại.');
+          } catch (error) {
+            console.error('Failed to restore field', error);
+            Alert.alert('Lỗi', 'Không thể khôi phục sân này.');
           }
         } 
       },
@@ -143,7 +163,11 @@ const AdminManageFieldsScreen = ({ navigation }: { navigation: any }) => {
           </View>
         }
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <TouchableOpacity 
+            style={styles.card}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('AdminFieldList', { sportCenter: { ...item, sportCenterId: item.id } })}
+          >
             {item.imageUrl ? (
               <Image source={{ uri: item.imageUrl.startsWith('http') ? item.imageUrl : `http://10.0.2.2:5115${item.imageUrl}` }} style={styles.thumb} />
             ) : (
@@ -166,22 +190,30 @@ const AdminManageFieldsScreen = ({ navigation }: { navigation: any }) => {
                 </View>
               </View>
               <Text style={styles.fieldMeta}>{item.address}</Text>
-              <Text style={styles.fieldPrice}>{item.price}</Text>
+              
               <View style={styles.actionRow}>
                 <TouchableOpacity
                   style={styles.editBtn}
-                  onPress={() => navigation.navigate('AdminEditField', { field: item })}
+                  onPress={() => navigation.navigate('AdminEditField', { field: { ...item, sportCenterId: item.id } })}
                 >
                   <Ionicons name="create-outline" size={14} color="#1E40AF" />
-                  <Text style={styles.editText}>Chỉnh sửa</Text>
+                  <Text style={styles.editText}>Sửa TT</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id, item.name)}>
-                  <Ionicons name="trash-outline" size={14} color="#ba1a1a" />
-                  <Text style={styles.deleteText}>Xóa</Text>
-                </TouchableOpacity>
+                
+                {item.status === 'open' ? (
+                  <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDelete(item.id, item.name)}>
+                    <Ionicons name="trash-outline" size={14} color="#ba1a1a" />
+                    <Text style={styles.deleteText}>Xóa</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={styles.restoreBtn} onPress={() => handleRestore(item.id, item.name)}>
+                    <Ionicons name="refresh-outline" size={14} color="#059669" />
+                    <Text style={styles.restoreText}>Khôi phục</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
       />
     </SafeAreaView>
@@ -250,6 +282,8 @@ const styles = StyleSheet.create({
   editText: { fontSize: 11, fontWeight: '700', color: '#1E40AF' },
   deleteBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#ffdada', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   deleteText: { fontSize: 11, fontWeight: '700', color: '#ba1a1a' },
+  restoreBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderColor: '#a7f3d0', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  restoreText: { fontSize: 11, fontWeight: '700', color: '#059669' },
   emptyState: { alignItems: 'center', paddingTop: 100, gap: 12 },
   emptyText: { fontSize: 14, color: '#9ca3af' },
 });

@@ -10,8 +10,11 @@ import { fieldsApi } from '../api/fieldsApi';
 import { BookingResponseDto, FieldResponseDto } from '../types/api';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { useAuthStore } from '../store/useAuthStore';
 
 const TicketDetailScreen = ({ navigation, route }: { navigation: any; route: any }) => {
+  const { role } = useAuthStore();
+  const isAdmin = role === 'Admin';
   const { bookingCode, field: passedField } = route?.params || {};
   
   const [booking, setBooking] = useState<BookingResponseDto | null>(null);
@@ -52,6 +55,31 @@ const TicketDetailScreen = ({ navigation, route }: { navigation: any; route: any
       console.error('Lỗi khi lưu ảnh:', error);
       Alert.alert('Lỗi', 'Không thể lưu ảnh, vui lòng thử lại.');
     }
+  };
+
+  const handleUpdateStatus = (newStatus: string) => {
+    Alert.alert(
+      'Xác nhận',
+      `Bạn có chắc chắn muốn ${newStatus === 'Confirmed' ? 'duyệt' : 'từ chối'} đơn này?`,
+      [
+        { text: 'Không', style: 'cancel' },
+        { 
+          text: 'Có', 
+          onPress: async () => {
+            try {
+              if (bookingCode) {
+                await bookingsApi.updateStatus(bookingCode, { status: newStatus });
+                Alert.alert('Thành công', newStatus === 'Confirmed' ? 'Đã duyệt đơn!' : 'Đã từ chối đơn!');
+                fetchData();
+              }
+            } catch (error) {
+              console.error('Lỗi cập nhật trạng thái:', error);
+              Alert.alert('Lỗi', 'Không thể cập nhật trạng thái.');
+            }
+          }
+        }
+      ]
+    );
   };
 
   const handleCancelBooking = () => {
@@ -145,7 +173,7 @@ const TicketDetailScreen = ({ navigation, route }: { navigation: any; route: any
           <Ionicons name="chevron-back" size={26} color="#111827" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Chi tiết đặt sân</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('MainTab' as never)}>
+        <TouchableOpacity onPress={() => navigation.navigate(isAdmin ? 'AdminTab' : 'MainTab' as never)}>
           <Ionicons name="close-outline" size={28} color="#111827" />
         </TouchableOpacity>
       </View>
@@ -161,13 +189,13 @@ const TicketDetailScreen = ({ navigation, route }: { navigation: any; route: any
             <Text style={styles.qrLabel}>MÃ VÉ ĐẶT SÂN</Text>
           <View style={styles.qrWrapper}>
             <QRCode
-              value={bookingCode}
+              value={booking?.checkInCode || bookingCode}
               size={140}
               color="#111827"
               backgroundColor="#fff"
             />
           </View>
-          <Text style={styles.bookingCode}>{bookingCode}</Text>
+          <Text style={styles.bookingCode}>{booking?.checkInCode || bookingCode}</Text>
 
           <View style={styles.dashedDivider} />
 
@@ -224,29 +252,49 @@ const TicketDetailScreen = ({ navigation, route }: { navigation: any; route: any
         </View>
       </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSaveToGallery}>
-          <Ionicons name="download-outline" size={18} color="#fff" />
-          <Text style={styles.saveButtonText}>Lưu vào ảnh</Text>
-        </TouchableOpacity>
-        {(finalStatus === 'Pending' || finalStatus === 'pending' || finalStatus === 0) && (
-          <TouchableOpacity style={styles.cancelButton} onPress={handleCancelBooking}>
-            <Text style={styles.cancelButtonText}>Hủy lịch đặt</Text>
+      {!isAdmin ? (
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.saveButton} onPress={handleSaveToGallery}>
+            <Ionicons name="download-outline" size={18} color="#fff" />
+            <Text style={styles.saveButtonText}>Lưu vào ảnh</Text>
           </TouchableOpacity>
-        )}
-        {(finalStatus === 'Completed' || finalStatus === 'completed' || finalStatus === 3) && (
-          <TouchableOpacity 
-            style={styles.reviewButton} 
-            onPress={() => navigation.navigate('WriteReview', { 
-              field: { name: finalVenueName, sportCenterId: booking?.sportCenterId || passedField?.sportCenterId },
-              bookingId: bookingCode 
-            })}
-          >
-            <Ionicons name="create-outline" size={18} color="#22c55e" />
-            <Text style={styles.reviewButtonText}>Viết đánh giá</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+          {(finalStatus === 'Pending' || finalStatus === 'pending' || finalStatus === 0) && (
+            <TouchableOpacity style={styles.cancelButton} onPress={handleCancelBooking}>
+              <Text style={styles.cancelButtonText}>Hủy lịch đặt</Text>
+            </TouchableOpacity>
+          )}
+          {(finalStatus === 'Completed' || finalStatus === 'completed' || finalStatus === 3) && (
+            <TouchableOpacity 
+              style={styles.reviewButton} 
+              onPress={() => navigation.navigate('WriteReview', { 
+                field: { name: finalVenueName, sportCenterId: booking?.sportCenterId || passedField?.sportCenterId },
+                bookingId: bookingCode 
+              })}
+            >
+              <Ionicons name="create-outline" size={18} color="#22c55e" />
+              <Text style={styles.reviewButtonText}>Viết đánh giá</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        (finalStatus === 'Pending' || finalStatus === 'pending' || finalStatus === 0) && (
+          <View style={[styles.footer, { flexDirection: 'row', gap: 12 }]}>
+            <TouchableOpacity 
+              style={[styles.cancelButton, { flex: 1, marginTop: 0, paddingVertical: 14, borderWidth: 1, borderColor: '#ef4444' }]} 
+              onPress={() => handleUpdateStatus('Cancelled')}
+            >
+              <Text style={styles.cancelButtonText}>Từ chối</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.saveButton, { flex: 1 }]} 
+              onPress={() => handleUpdateStatus('Confirmed')}
+            >
+              <Ionicons name="checkmark-outline" size={18} color="#fff" />
+              <Text style={styles.saveButtonText}>Duyệt đơn</Text>
+            </TouchableOpacity>
+          </View>
+        )
+      )}
     </SafeAreaView>
   );
 };

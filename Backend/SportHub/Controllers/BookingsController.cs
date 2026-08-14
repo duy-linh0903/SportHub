@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportHub.DTOs.Booking;
 using SportHub.Services.Interfaces;
+using System.Security.Claims;
 
 namespace SportHub.Controllers
 {
@@ -19,10 +20,24 @@ namespace SportHub.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpGet]
-        public async Task<ActionResult<List<BookingResponseDto>>> GetAll()
+        public async Task<IActionResult> GetAllBookings()
         {
-            var bookings = await _bookingService.GetAllBookingsAsync();
-            return Ok(bookings);
+            var result = await _bookingService.GetAllBookingsAsync();
+            return Ok(result);
+        }
+
+        [HttpGet("owner")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetBookingsByOwner()
+        {
+            var ownerIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(ownerIdString) || !Guid.TryParse(ownerIdString, out Guid ownerId))
+            {
+                return Unauthorized("Invalid user ID");
+            }
+
+            var result = await _bookingService.GetBookingsByOwnerAsync(ownerId);
+            return Ok(result);
         }
 
         [HttpGet("{id:guid}")]
@@ -33,14 +48,42 @@ namespace SportHub.Controllers
             {
                 return NotFound();
             }
+
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var isAdmin = User.IsInRole("Admin");
+            if (!isAdmin && booking.UserId.ToString() != userIdString)
+            {
+                return Forbid();
+            }
+
             return Ok(booking);
+        }
+
+        [HttpGet("checkincode/{code}")]
+        public async Task<ActionResult<BookingResponseDto>> GetByCheckInCode(string code)
+        {
+            try
+            {
+                var booking = await _bookingService.GetBookingByCheckInCodeAsync(code);
+                return Ok(booking);
+            }
+            catch (KeyNotFoundException)
+            {
+                return NotFound();
+            }
         }
 
         [Authorize(Roles = "User,Admin")]
         [HttpPost]
         public async Task<ActionResult<BookingResponseDto>> Create([FromBody] CreateBookingDto bookingDto)
         {
-            var createdBooking = await _bookingService.CreateBookingAsync(bookingDto, bookingDto.UserId);
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+            {
+                return Unauthorized();
+            }
+
+            var createdBooking = await _bookingService.CreateBookingAsync(bookingDto, userId);
             return CreatedAtAction(nameof(GetById), new { id = createdBooking.BookingId }, createdBooking);
         }
 
@@ -56,6 +99,16 @@ namespace SportHub.Controllers
         [HttpDelete("{bookingId:guid}")]
         public async Task<IActionResult> Cancel(Guid bookingId)
         {
+            var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+            if (booking == null) return NotFound();
+
+            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var isAdmin = User.IsInRole("Admin");
+            if (!isAdmin && booking.UserId.ToString() != userIdString)
+            {
+                return Forbid();
+            }
+
             await _bookingService.CancelBookingAsync(bookingId);
             return NoContent();
         }
@@ -64,6 +117,13 @@ namespace SportHub.Controllers
         [HttpGet("user/{userId:guid}")]
         public async Task<ActionResult<List<BookingResponseDto>>> GetByUser(Guid userId)
         {
+            var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var isAdmin = User.IsInRole("Admin");
+            if (!isAdmin && userId.ToString() != currentUserIdString)
+            {
+                return Forbid();
+            }
+
             var bookings = await _bookingService.GetBookingsByUserAsync(userId);
             return Ok(bookings);
         }

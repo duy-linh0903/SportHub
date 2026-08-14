@@ -30,4 +30,9 @@ export const servicesApi = {
     const response = await axiosClient.get<ServiceResponseDto[]>(`/api/services/field-type/${type}`);
     return response.data;
   },
+
+  getBySportCenter: async (sportCenterId: string) => {
+    const response = await axiosClient.get<ServiceResponseDto[]>(`/api/services/sportcenter/${sportCenterId}`);
+    return response.data;
+  },
 };

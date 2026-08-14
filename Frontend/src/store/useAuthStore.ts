@@ -46,10 +46,19 @@ export const useAuthStore = create<AuthState>((set) => ({
         let role = null;
         try {
           const decodedPayload: any = jwtDecode(token);
+          const currentTime = Date.now() / 1000;
+          if (decodedPayload.exp && decodedPayload.exp < currentTime) {
+            // Token expired
+            await AsyncStorage.removeItem('accessToken');
+            set({ token: null, role: null, userId: null, isAuthenticated: false });
+            return;
+          }
           userId = decodedPayload.sub || decodedPayload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
           role = decodedPayload.role || decodedPayload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
         } catch (e) {
           console.warn('Could not decode JWT on init:', e);
+          await AsyncStorage.removeItem('accessToken');
+          return;
         }
         set({ token, role, userId, isAuthenticated: true });
       }

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportHub.DTOs.Review;
 using SportHub.Services.Interfaces;
+using System.Security.Claims;
 
 namespace SportHub.Controllers
 {
@@ -20,6 +21,19 @@ namespace SportHub.Controllers
         public async Task<ActionResult<List<ReviewResponseDto>>> GetBySportCenter(Guid sportCenterId)
         {
             return Ok(await _reviewService.GetReviewsBySportCenterAsync(sportCenterId));
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("owner")]
+        public async Task<ActionResult<List<ReviewResponseDto>>> GetByOwner()
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out var ownerId))
+            {
+                return Unauthorized(new { message = "Không tìm thấy thông tin Owner" });
+            }
+
+            return Ok(await _reviewService.GetReviewsByOwnerAsync(ownerId));
         }
 
         [Authorize]

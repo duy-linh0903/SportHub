@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { usersApi } from '../api/usersApi';
 import { useAuthStore } from '../store/useAuthStore';
 import { useThemeStore } from '../store/useThemeStore';
 import { UpdateProfileDto } from '../types/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const EditProfileScreen = ({ navigation, route }: { navigation: any; route: any }) => {
   const profile = route?.params?.profile;
@@ -30,6 +31,18 @@ const EditProfileScreen = ({ navigation, route }: { navigation: any; route: any 
   const [loading, setLoading] = useState(false);
   const [areaModalVisible, setAreaModalVisible] = useState(false);
   const { isDarkMode } = useThemeStore();
+
+  useEffect(() => {
+    const loadArea = async () => {
+      try {
+        const savedArea = await AsyncStorage.getItem('user_preferred_area');
+        if (savedArea) setArea(savedArea);
+      } catch (e) {
+        console.error('Failed to load area', e);
+      }
+    };
+    loadArea();
+  }, []);
 
   const areas = [
     'Quận 1, TP. Hồ Chí Minh',
@@ -67,6 +80,8 @@ const EditProfileScreen = ({ navigation, route }: { navigation: any; route: any 
       };
 
       await usersApi.update(userId, dto);
+      await AsyncStorage.setItem('user_preferred_area', area);
+      
       Alert.alert('Thành công', 'Thông tin của bạn đã được cập nhật.', [
         { text: 'OK', onPress: () => navigation.goBack() }
       ]);

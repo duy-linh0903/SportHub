@@ -50,7 +50,11 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader()
             .AllowCredentials());
 });
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddSignalR();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -228,12 +232,22 @@ using (var scope = app.Services.CreateScope())
         new SportCenters { Id = Guid.Parse("00000000-0000-0000-0000-000000000109"), Name = "CLB Bóng bàn Hoa Lư", Address = "2 Đinh Tiên Hoàng, Quận 1", Description = "Nhiều bàn bóng bàn chất lượng, có robot bắn bóng.", Status = SportCenterStatus.Active, CreatedAt = DateTime.Parse("2026-08-11T00:00:00") }
     };
 
+    var defaultAdminId = Guid.Parse("00000000-0000-0000-0000-000000000010");
     foreach (var sportCenter in sportCenters)
     {
         if (!db.SportCenters.Any(sc => sc.Id == sportCenter.Id || sc.Name == sportCenter.Name))
         {
+            sportCenter.OwnerId = defaultAdminId;
             db.SportCenters.Add(sportCenter);
         }
+    }
+    db.SaveChanges();
+    
+    // Update existing sport centers without an owner
+    var ownerlessCenters = db.SportCenters.Where(sc => sc.OwnerId == null).ToList();
+    foreach (var center in ownerlessCenters)
+    {
+        center.OwnerId = defaultAdminId;
     }
     db.SaveChanges();
 

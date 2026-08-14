@@ -1,6 +1,93 @@
 @SportHub_HostAddress = http://localhost:5286
+@Token = YOUR_JWT_TOKEN_HERE
 
-GET {{SportHub_HostAddress}}/weatherforecast/
+### --- AUTHENTICATION ---
+
+### Login
+POST {{SportHub_HostAddress}}/api/Auth/login
+Content-Type: application/json
+
+{
+  "email": "testuser@gmail.com",
+  "password": "Password123!"
+}
+
+### Register
+POST {{SportHub_HostAddress}}/api/Auth/register
+Content-Type: application/json
+
+{
+  "email": "newuser@gmail.com",
+  "password": "Password123!",
+  "fullName": "New User"
+}
+
+
+### --- SPORT CENTERS ---
+
+### Get All Sport Centers
+GET {{SportHub_HostAddress}}/api/SportCenters
 Accept: application/json
 
-###
+### Get Sport Center By Id
+GET {{SportHub_HostAddress}}/api/SportCenters/1
+Accept: application/json
+
+
+### --- FIELDS ---
+
+### Get Fields by Sport Center
+GET {{SportHub_HostAddress}}/api/Fields?sportCenterId=1
+Accept: application/json
+
+
+### --- BOOKINGS ---
+
+### Get User Bookings
+GET {{SportHub_HostAddress}}/api/Bookings/my-bookings
+Authorization: Bearer {{Token}}
+Accept: application/json
+
+### Create Booking
+POST {{SportHub_HostAddress}}/api/Bookings
+Authorization: Bearer {{Token}}
+Content-Type: application/json
+
+{
+  "fieldId": 1,
+  "date": "2024-12-31",
+  "timeSlotIds": [1, 2]
+}
+
+
+### --- REVIEWS ---
+
+### Get Reviews by Sport Center
+GET {{SportHub_HostAddress}}/api/Reviews?sportCenterId=1
+Accept: application/json
+
+### Add Review
+POST {{SportHub_HostAddress}}/api/Reviews
+Authorization: Bearer {{Token}}
+Content-Type: application/json
+
+{
+  "sportCenterId": 1,
+  "rating": 5,
+  "comment": "Great place!"
+}
+
+
+### --- SERVICES ---
+
+### Get Services for Sport Center
+GET {{SportHub_HostAddress}}/api/Services?sportCenterId=1
+Accept: application/json
+
+
+### --- USERS ---
+
+### Get User Profile
+GET {{SportHub_HostAddress}}/api/Users/profile
+Authorization: Bearer {{Token}}
+Accept: application/json

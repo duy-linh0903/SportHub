@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace SportHub.DTOs.Service
 {
@@ -11,5 +11,6 @@ namespace SportHub.DTOs.Service
         [Required, StringLength(50)]
         public string Type { get; set; }
         public string? Description { get; set; }
+        public Guid? SportCenterId { get; set; }
     }
 }

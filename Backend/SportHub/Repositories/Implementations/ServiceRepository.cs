@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SportHub.Data;
 using SportHub.Models;
 using SportHub.Repositories.Interfaces;
@@ -56,6 +56,13 @@ namespace SportHub.Repositories.Implementations
         public async Task<List<ServiceItem>> GetByFieldTypeAsync(string type)
         {
             return await _context.ServiceItem.Where(s => s.Type == type).ToListAsync();
+        }
+
+        public async Task<List<ServiceItem>> GetBySportCenterAsync(Guid sportCenterId)
+        {
+            return await _context.ServiceItem
+                .Where(s => s.Status != ServiceStatus.Deleted && (s.SportCenterId == sportCenterId || s.SportCenterId == null))
+                .ToListAsync();
         }
     }
 }

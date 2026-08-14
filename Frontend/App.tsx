@@ -34,6 +34,11 @@ import TermsOfServiceScreen from './src/screens/TermsOfServiceScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import MapScreen from './src/screens/MapScreen';
 import PaymentScreen from './src/screens/PaymentScreen';
+import AdminFieldListScreen from './src/screens/AdminFieldListScreen';
+import AdminEditSubFieldScreen from './src/screens/AdminEditSubFieldScreen';
+import AdminReviewListScreen from './src/screens/AdminReviewListScreen';
+import AdminTimeSlotScreen from './src/screens/AdminTimeSlotScreen';
+import AdminServiceScreen from './src/screens/AdminServiceScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -65,6 +70,11 @@ export type RootStackParamList = {
   About: undefined;
   Map: undefined;
   Payment: { paymentUrl: string; bookingData: any; totalPrice: number; selectedPayment: string } | undefined;
+  AdminFieldList: { sportCenter: any } | undefined;
+  AdminEditSubField: { sportCenterId: string; subField?: any } | undefined;
+  AdminReviewList: undefined;
+  AdminTimeSlot: { sportCenterId: string; sportCenterName: string } | undefined;
+  AdminService: { sportCenterId: string; sportCenterName: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -100,6 +110,11 @@ export default function App() {
         <Stack.Screen name="TicketDetail" component={TicketDetailScreen} />
         <Stack.Screen name="WriteReview" component={WriteReviewScreen} />
         <Stack.Screen name="ReviewList" component={ReviewListScreen} />
+        <Stack.Screen name="AdminFieldList" component={AdminFieldListScreen} />
+        <Stack.Screen name="AdminEditSubField" component={AdminEditSubFieldScreen} />
+        <Stack.Screen name="AdminReviewList" component={AdminReviewListScreen} />
+        <Stack.Screen name="AdminTimeSlot" component={AdminTimeSlotScreen} />
+        <Stack.Screen name="AdminService" component={AdminServiceScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />

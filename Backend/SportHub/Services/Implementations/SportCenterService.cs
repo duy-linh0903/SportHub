@@ -28,7 +28,8 @@ namespace SportHub.Services.Implementations
                     Description = sc.Description,
                     CreatedAt = sc.CreatedAt,
                     images = sc.Images?.ToList(),
-                    MinPrice = sc.Fields != null && sc.Fields.Any() ? sc.Fields.Min(f => f.PricePerSlot) : 0
+                    MinPrice = sc.Fields != null && sc.Fields.Any() ? sc.Fields.Min(f => f.PricePerSlot) : 0,
+                    Status = sc.Status.ToString()
                 });
             }
             return result;
@@ -48,7 +49,8 @@ namespace SportHub.Services.Implementations
                 Address = sportCenter.Address,
                 Description = sportCenter.Description,
                 CreatedAt = sportCenter.CreatedAt,
-                images = sportCenter.Images?.ToList()
+                images = sportCenter.Images?.ToList(),
+                Status = sportCenter.Status.ToString()
             };
         }
 
@@ -58,7 +60,8 @@ namespace SportHub.Services.Implementations
             {
                 Name = sportCenterDto.Name,
                 Address = sportCenterDto.Address,
-                Description = sportCenterDto.Description
+                Description = sportCenterDto.Description,
+                Images = sportCenterDto.images?.Select(i => new SportCenterImages { Url = i.Url }).ToList()
             };
             await _sportCenter.AddAsync(sportCenter);
             return new SportCenterResponseDto
@@ -68,7 +71,8 @@ namespace SportHub.Services.Implementations
                 Address = sportCenter.Address,
                 Description = sportCenter.Description,
                 CreatedAt = sportCenter.CreatedAt,
-                images = sportCenter.Images?.ToList()
+                images = sportCenter.Images?.ToList(),
+                Status = sportCenter.Status.ToString()
             };
         }
 
@@ -79,34 +83,43 @@ namespace SportHub.Services.Implementations
             {
                 throw new KeyNotFoundException("Sport center isn't found");
             }
-            sportCenter.Name = sportCenterDto.Name;
-            sportCenter.Address = sportCenterDto.Address;
-            sportCenter.Description = sportCenterDto.Description;
-            await _sportCenter.UpdateAsync(sportCenter);
+            var updateSport = new SportCenters
+            {
+                Id = id,
+                Name = sportCenterDto.Name,
+                Address = sportCenterDto.Address,
+                Description = sportCenterDto.Description,
+                Images = sportCenterDto.images?.Select(i => new SportCenterImages { Url = i.Url }).ToList()
+            };
+            await _sportCenter.UpdateAsync(updateSport);
+            
+            // Re-fetch to get updated values including standard formatting if any
+            var updated = await _sportCenter.GetByIdAsync(id);
             return new SportCenterResponseDto
             {
-                SportCenterId = sportCenter.Id,
-                Name = sportCenter.Name,
-                Address = sportCenter.Address,
-                Description = sportCenter.Description,
-                CreatedAt = sportCenter.CreatedAt,
-                images = sportCenter.Images?.ToList()
+                SportCenterId = updated.Id,
+                Name = updated.Name,
+                Address = updated.Address,
+                Description = updated.Description,
+                CreatedAt = updated.CreatedAt,
+                images = updated.Images?.ToList(),
+                Status = updated.Status.ToString()
             };
         }
 
         public async Task DeleteSportCenterAsync(Guid id)
         {
-            var sportCenter = await _sportCenter.GetByIdAsync(id);
-            if ( sportCenter == null)
-            {
-                throw new KeyNotFoundException("Sport center isn't found");
-            }
-            sportCenter.Status = SportCenterStatus.Deleted;
+            await _sportCenter.DeleteAsync(id);
+        }
+
+        public async Task RestoreSportCenterAsync(Guid id)
+        {
+            await _sportCenter.RestoreAsync(id);
         }
 
         public async Task<List<SportCenterResponseDto>> SearchSportCentersAsync(string name)
         {
-            var sportCenter = await _sportCenter.SearchByNameAsync(name);
+            var sportCenter = await _sportCenter.SearchAsync(name);
             var result = new List<SportCenterResponseDto>();
             foreach (var sport in sportCenter)
             {
@@ -117,7 +130,29 @@ namespace SportHub.Services.Implementations
                     Address = sport.Address,
                     Description= sport.Description,
                     CreatedAt = sport.CreatedAt,
-                    images = sport.Images?.ToList()
+                    images = sport.Images?.ToList(),
+                    Status = sport.Status.ToString()
+                });
+            }
+            return result;
+        }
+
+        public async Task<List<SportCenterResponseDto>> GetSportCentersByOwnerIdAsync(Guid ownerId)
+        {
+            var sportCenter = await _sportCenter.GetByOwnerIdAsync(ownerId);
+            var result = new List<SportCenterResponseDto>();
+            foreach (var sc in sportCenter)
+            {
+                result.Add(new SportCenterResponseDto
+                {
+                    SportCenterId = sc.Id,
+                    Name = sc.Name,
+                    Address = sc.Address,
+                    Description = sc.Description,
+                    CreatedAt = sc.CreatedAt,
+                    images = sc.Images?.ToList(),
+                    MinPrice = sc.Fields != null && sc.Fields.Any() ? sc.Fields.Min(f => f.PricePerSlot) : 0,
+                    Status = sc.Status.ToString()
                 });
             }
             return result;

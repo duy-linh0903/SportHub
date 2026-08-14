@@ -7,8 +7,18 @@ export const bookingsApi = {
     return response.data;
   },
 
+  getByOwner: async () => {
+    const response = await axiosClient.get<BookingResponseDto[]>('/api/bookings/owner');
+    return response.data;
+  },
+
   getById: async (id: string) => {
     const response = await axiosClient.get<BookingResponseDto>(`/api/bookings/${id}`);
+    return response.data;
+  },
+
+  getByCheckInCode: async (code: string) => {
+    const response = await axiosClient.get<BookingResponseDto>(`/api/bookings/checkincode/${code}`);
     return response.data;
   },
 

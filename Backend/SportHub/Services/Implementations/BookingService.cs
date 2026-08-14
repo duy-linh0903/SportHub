@@ -46,6 +46,16 @@ namespace SportHub.Services.Implementations
             return BookingServiceDto(booking);
         }
 
+        public async Task<BookingResponseDto?> GetBookingByCheckInCodeAsync(string code)
+        {
+            var booking = await _bookingRepository.GetByCheckInCodeAsync(code);
+            if (booking == null)
+            {
+                throw new KeyNotFoundException("Booking isn't found");
+            }
+            return BookingServiceDto(booking);
+        }
+
         public async Task<BookingResponseDto> CreateBookingAsync(CreateBookingDto bookingDto, Guid userId)
         {
             var user = await _userRepository.GetByIdAsync(userId);
@@ -146,12 +156,27 @@ namespace SportHub.Services.Implementations
             return BookingServiceDto(booking);
         }
 
+        public async Task<List<BookingResponseDto>> GetBookingsByOwnerAsync(Guid ownerId)
+        {
+            var bookings = await _bookingRepository.GetBookingsByOwnerAsync(ownerId);
+            return BookingServiceListDto(bookings);
+        }
+
         public async Task UpdateBookingStatusAsync(Guid bookingId, BookingStatus status)
         {
             var booking = await _bookingRepository.GetByIdAsync(bookingId);
             if (booking == null)
             {
                 throw new KeyNotFoundException("Booking isn't found");
+            }
+
+            if (booking.Status == BookingStatus.Cancelled && status != BookingStatus.Cancelled)
+            {
+                throw new InvalidOperationException("Cannot change status of a cancelled booking.");
+            }
+            if (booking.Status == BookingStatus.Completed && status != BookingStatus.Completed)
+            {
+                throw new InvalidOperationException("Cannot change status of a completed booking.");
             }
 
             await _bookingRepository.UpdateStatusAsync(bookingId, status.ToString());

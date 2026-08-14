@@ -9,6 +9,8 @@ namespace SportHub.Repositories.Interfaces
         Task AddAsync(SportCenters createSportCenter);
         Task UpdateAsync(SportCenters updateSportCenter);
         Task DeleteAsync(Guid id);
-        Task<List<SportCenters>> SearchByNameAsync(string name);
+        Task RestoreAsync(Guid id);
+        Task<IEnumerable<SportCenters>> SearchAsync(string name);
+        Task<IEnumerable<SportCenters>> GetByOwnerIdAsync(Guid ownerId);
     }
 }

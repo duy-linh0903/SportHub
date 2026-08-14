@@ -12,6 +12,11 @@ export const sportCentersApi = {
     return response.data;
   },
 
+  getByOwner: async (): Promise<SportCenterResponseDto[]> => {
+    const response = await axiosClient.get('/api/sportcenters/owner');
+    return response.data;
+  },
+
   create: async (data: CreateSportCenterDto) => {
     const response = await axiosClient.post<SportCenterResponseDto>('/api/sportcenters', data);
     return response.data;
@@ -24,6 +29,10 @@ export const sportCentersApi = {
 
   delete: async (id: string) => {
     await axiosClient.delete(`/api/sportcenters/${id}`);
+  },
+
+  restore: async (id: string) => {
+    await axiosClient.put(`/api/sportcenters/${id}/restore`);
   },
 
   search: async (name?: string) => {

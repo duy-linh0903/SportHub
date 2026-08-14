@@ -24,7 +24,7 @@ const AdminQRScannerScreen = () => {
     }
     setLoading(true);
     try {
-      const b = await bookingsApi.getById(bookingIdInput.trim());
+      const b = await bookingsApi.getByCheckInCode(bookingIdInput.trim());
       setBooking(b);
       const f = await fieldsApi.getById(b.fieldId);
       setField(f);

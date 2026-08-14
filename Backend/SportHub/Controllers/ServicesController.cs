@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportHub.DTOs.Service;
 using SportHub.Services.Interfaces;
@@ -65,6 +65,13 @@ namespace SportHub.Controllers
         public async Task<ActionResult<List<ServiceResponseDto>>> GetByFieldType(string type)
         {
             return Ok(await _serviceItemService.GetServicesByFieldTypeAsync(type));
+        }
+
+        [AllowAnonymous]
+        [HttpGet("sportcenter/{sportCenterId:guid}")]
+        public async Task<ActionResult<List<ServiceResponseDto>>> GetBySportCenter(Guid sportCenterId)
+        {
+            return Ok(await _serviceItemService.GetServicesBySportCenterAsync(sportCenterId));
         }
     }
 }

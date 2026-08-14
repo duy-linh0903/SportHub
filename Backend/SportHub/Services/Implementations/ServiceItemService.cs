@@ -32,7 +32,8 @@ namespace SportHub.Services.Implementations
                 Name = createServiceDto.Name,
                 Price = createServiceDto.Price,
                 Type = createServiceDto.Type,
-                Description = createServiceDto.Description
+                Description = createServiceDto.Description,
+                SportCenterId = createServiceDto.SportCenterId
             };
             await _serviceRepository.AddAsync(serviceItem);
             return ServicesDto(serviceItem);
@@ -49,6 +50,7 @@ namespace SportHub.Services.Implementations
             serviceItem.Price = serviceDto.Price;
             serviceItem.Type = serviceDto.Type;
             serviceItem.Description = serviceDto.Description;
+            serviceItem.SportCenterId = serviceDto.SportCenterId;
             await _serviceRepository.UpdateAsync(serviceItem);
             return ServicesDto(serviceItem);
         }
@@ -69,6 +71,12 @@ namespace SportHub.Services.Implementations
             return ServiceListDto(serviceList);
         }
 
+        public async Task<List<ServiceResponseDto>> GetServicesBySportCenterAsync(Guid sportCenterId)
+        {
+            var serviceList = await _serviceRepository.GetBySportCenterAsync(sportCenterId);
+            return ServiceListDto(serviceList);
+        }
+
         public ServiceResponseDto ServicesDto(ServiceItem item)
         {
             return new ServiceResponseDto
@@ -76,7 +84,8 @@ namespace SportHub.Services.Implementations
                 ServiceId = item.Id,
                 Name = item.Name,
                 Price = item.Price,
-                Description = item.Description
+                Description = item.Description,
+                SportCenterId = item.SportCenterId
             };
         }
 

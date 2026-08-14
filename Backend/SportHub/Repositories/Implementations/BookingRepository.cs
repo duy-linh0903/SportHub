@@ -34,6 +34,16 @@ namespace SportHub.Repositories.Implementations
                 .FirstOrDefaultAsync(b => b.Id == id);
         }
 
+        public async Task<Bookings?> GetByCheckInCodeAsync(string code)
+        {
+            return await _context.Bookings
+                .Include(b => b.Fields)
+                    .ThenInclude(f => f.SportCenter)
+                .Include(b => b.BookingSlots)
+                    .ThenInclude(bs => bs.TimeSlots)
+                .FirstOrDefaultAsync(b => b.CheckInCode == code);
+        }
+
         public async Task AddAsync(Bookings addBooking)
         {
             await _context.Bookings.AddAsync(addBooking);
@@ -94,6 +104,17 @@ namespace SportHub.Repositories.Implementations
                 .ToListAsync();
         }
 
+        public async Task<List<Bookings>> GetBookingsByOwnerAsync(Guid ownerId)
+        {
+            return await _context.Bookings
+                .Include(b => b.Fields)
+                    .ThenInclude(f => f.SportCenter)
+                .Include(b => b.BookingSlots)
+                    .ThenInclude(bs => bs.TimeSlots)
+                .Where(b => b.Fields.SportCenter.OwnerId == ownerId)
+                .ToListAsync();
+        }
+
         public async Task UpdateStatusAsync(Guid bookingId, string newStatus)
         {
             var booking = await _context.Bookings.FirstOrDefaultAsync(b => b.Id == bookingId);
@@ -133,9 +154,21 @@ namespace SportHub.Repositories.Implementations
 
         public async Task CreateBookingWithDetailsAsync(Bookings booking, List<BookingServices> bookingServices, List<BookingSlots> bookingSlots)
         {
-            await using var trx = await _context.Database.BeginTransactionAsync();
+            await using var trx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
             try
             {
+                var slotIds = bookingSlots.Select(bs => bs.SlotId).ToList();
+                var conflictExists = await _context.BookingSlots.AnyAsync(bs =>
+                    slotIds.Contains(bs.SlotId) &&
+                    bs.Bookings.FieldId == booking.FieldId &&
+                    bs.Bookings.BookingDate == booking.BookingDate &&
+                    (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed));
+
+                if (conflictExists)
+                {
+                    throw new InvalidOperationException("One or more selected slots are already booked for the requested field and date.");
+                }
+
                 await _context.Bookings.AddAsync(booking);
                 if (bookingServices != null && bookingServices.Any())
                 {

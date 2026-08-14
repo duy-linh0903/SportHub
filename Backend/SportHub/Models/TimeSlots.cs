@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SportHub.Models
 {
@@ -10,6 +11,11 @@ namespace SportHub.Models
         public TimeOnly StartTime { get; set; }
         [Required]
         public TimeOnly EndTime { get; set; }
+
+        public Guid? SportCenterId { get; set; }
+        [ForeignKey(nameof(SportCenterId))]
+        public virtual SportCenters? SportCenter { get; set; }
+
         public TimeSlots()
         {
             Id = Guid.NewGuid();

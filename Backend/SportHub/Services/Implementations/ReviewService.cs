@@ -26,7 +26,30 @@ namespace SportHub.Services.Implementations
                     Rating = review.Rating,
                     Comment = review.Comment,
                     UserId = review.UserId,
-                    SportCenterId = sportCenterId
+                    UserName = review.Users?.Name, // Assuming Users is populated if we joined it
+                    SportCenterId = sportCenterId,
+                    SportCenterName = review.SportCenters?.Name,
+                    CreatedAt = review.CreatedAt
+                });
+            }
+            return result;
+        }
+
+        public async Task<List<ReviewResponseDto>> GetReviewsByOwnerAsync(Guid ownerId)
+        {
+            var reviewList = await _reviewRepository.GetByOwnerIdAsync(ownerId);
+            var result = new List<ReviewResponseDto>();
+            foreach (var review in reviewList)
+            {
+                result.Add(new ReviewResponseDto
+                {
+                    Rating = review.Rating,
+                    Comment = review.Comment,
+                    UserId = review.UserId,
+                    UserName = review.Users?.Name,
+                    SportCenterId = review.SportCenterId,
+                    SportCenterName = review.SportCenters?.Name,
+                    CreatedAt = review.CreatedAt
                 });
             }
             return result;
@@ -58,7 +81,9 @@ namespace SportHub.Services.Implementations
                 Rating = review.Rating,
                 Comment = review.Comment,
                 UserId = review.UserId,
-                SportCenterId = review.SportCenterId
+                UserName = booking.User?.Name, // Might be null if not included
+                SportCenterId = review.SportCenterId,
+                CreatedAt = review.CreatedAt
             };
         }
     }

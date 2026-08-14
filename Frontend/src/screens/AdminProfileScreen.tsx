@@ -1,31 +1,79 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Switch, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useAuthStore } from '../store/useAuthStore';
+import { usersApi } from '../api/usersApi';
 
 const AdminProfileScreen = ({ navigation }: { navigation: any }) => {
+  const { userId, logout } = useAuthStore();
+  const [loading, setLoading] = useState(true);
   // State quản lý thông tin cá nhân
   const [isEditing, setIsEditing] = useState(false);
-  const [name, setName] = useState('Nguyễn Văn Admin');
-  const [email, setEmail] = useState('admin.sporthub@gmail.com');
-  const [phone, setPhone] = useState('0987654321');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
   // State quản lý cài đặt hệ thống
   const [notify, setNotify] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    if (userId) {
+      fetchProfile();
+    }
+  }, [userId]);
+
+  const fetchProfile = async () => {
+    setLoading(true);
+    try {
+      const data = await usersApi.getById(userId!);
+      setName(data.name || '');
+      setEmail(data.email || '');
+      setPhone(data.phoneNumber || '');
+    } catch (error) {
+      console.error('Failed to fetch admin profile', error);
+      Alert.alert('Lỗi', 'Không thể tải thông tin cá nhân.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
-    navigation.replace('Login');
+    Alert.alert('Xác nhận', 'Bạn có chắc chắn muốn đăng xuất?', [
+      { text: 'Hủy', style: 'cancel' },
+      { 
+        text: 'Đăng xuất', 
+        style: 'destructive',
+        onPress: async () => {
+          await logout();
+          navigation.replace('Login');
+        }
+      }
+    ]);
   };
 
   const handleSwitchAccount = () => {
     navigation.replace('RoleSelection');
   };
 
-  const handleSaveProfile = () => {
-    // Gọi API lưu dữ liệu ở đây (sau này)
-    setIsEditing(false);
+  const handleSaveProfile = async () => {
+    try {
+      await usersApi.updateProfile({ name, email, phoneNumber: phone });
+      Alert.alert('Thành công', 'Đã cập nhật thông tin.');
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Failed to update profile', error);
+      Alert.alert('Lỗi', 'Không thể cập nhật thông tin cá nhân.');
+    }
   };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color="#1E40AF" />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -38,7 +86,7 @@ const AdminProfileScreen = ({ navigation }: { navigation: any }) => {
         {/* 1. Phần Thông tin Admin (Có thể chỉnh sửa) */}
         <View style={styles.profileSection}>
           <TouchableOpacity style={styles.avatarBtn}>
-            <Text style={styles.avatarText}>{name.charAt(0)}</Text>
+            <Text style={styles.avatarText}>{name ? name.charAt(0).toUpperCase() : 'A'}</Text>
           </TouchableOpacity>
           
           {isEditing ? (
@@ -58,8 +106,8 @@ const AdminProfileScreen = ({ navigation }: { navigation: any }) => {
             </View>
           ) : (
             <>
-              <Text style={styles.adminName}>{name}</Text>
-              <Text style={styles.adminEmail}>{email} • {phone}</Text>
+              <Text style={styles.adminName}>{name || 'Chủ sân'}</Text>
+              <Text style={styles.adminEmail}>{email}{phone ? ` • ${phone}` : ''}</Text>
               
               <View style={styles.roleBadge}>
                 <Ionicons name="shield-checkmark" size={14} color="#1E40AF" />
@@ -93,20 +141,6 @@ const AdminProfileScreen = ({ navigation }: { navigation: any }) => {
             />
           </View>
 
-          <View style={styles.settingItem}>
-            <View style={styles.menuLeft}>
-              <View style={[styles.menuIcon, { backgroundColor: '#f3f4f6' }]}>
-                <Ionicons name="moon-outline" size={20} color="#4b5563" />
-              </View>
-              <Text style={styles.menuText}>Chế độ tối (Dark Mode)</Text>
-            </View>
-            <Switch 
-              value={darkMode} 
-              onValueChange={setDarkMode} 
-              trackColor={{ false: '#d1d5db', true: '#22c55e' }}
-              thumbColor="#ffffff"
-            />
-          </View>
         </View>
 
         {/* 3. Cụm Nút Đổi tài khoản & Đăng xuất */}

@@ -1,4 +1,4 @@
-﻿using SportHub.Models;
+using SportHub.Models;
 
 namespace SportHub.Repositories.Interfaces
 {
@@ -10,5 +10,6 @@ namespace SportHub.Repositories.Interfaces
         Task UpdateAsync(ServiceItem updateService);
         Task DeleteAsync(Guid id);
         Task<List<ServiceItem>> GetByFieldTypeAsync(string type);
+        Task<List<ServiceItem>> GetBySportCenterAsync(Guid sportCenterId);
     }
 }

@@ -10,6 +10,6 @@ namespace SportHub.DTOs.SportCenter
         [Required]
         public string Address { get; set; }
         public string? Description { get; set; }
-        public List<SportCenterImages> images { get; set; } 
+        public List<SportCenterImageDto> images { get; set; } 
     }
 }

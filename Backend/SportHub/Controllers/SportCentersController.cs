@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportHub.DTOs.SportCenter;
 using SportHub.Services.Interfaces;
@@ -59,6 +59,28 @@ namespace SportHub.Controllers
         {
             await _sportCenterService.DeleteSportCenterAsync(id);
             return NoContent();
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPut("{id:guid}/restore")]
+        public async Task<IActionResult> Restore(Guid id)
+        {
+            await _sportCenterService.RestoreSportCenterAsync(id);
+            return NoContent();
+        }
+
+        [HttpGet("owner")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetSportCentersByOwner()
+        {
+            var ownerIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(ownerIdString) || !Guid.TryParse(ownerIdString, out Guid ownerId))
+            {
+                return Unauthorized("Invalid user ID");
+            }
+
+            var result = await _sportCenterService.GetSportCentersByOwnerIdAsync(ownerId);
+            return Ok(result);
         }
 
         [HttpGet("search")]

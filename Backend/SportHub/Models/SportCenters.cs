@@ -25,6 +25,11 @@ namespace SportHub.Models
         public virtual ICollection<SportCenterImages> Images { get; set; }
         [InverseProperty("SportCenter")]
         public virtual ICollection<Fields> Fields { get; set; }
+        
+        public Guid? OwnerId { get; set; }
+        [ForeignKey(nameof(OwnerId))]
+        public virtual Users Owner { get; set; }
+        
         public SportCenters()
         {
             Id = Guid.NewGuid();

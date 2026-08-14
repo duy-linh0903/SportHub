@@ -7,13 +7,15 @@ namespace SportHub.Services.Interfaces
     {
         Task<List<BookingResponseDto>> GetAllBookingsAsync();
         Task<BookingResponseDto?> GetBookingByIdAsync(Guid id);
+        Task<BookingResponseDto?> GetBookingByCheckInCodeAsync(string code);
         Task<BookingResponseDto> CreateBookingAsync(CreateBookingDto bookingDto, Guid userId);
-        Task UpdateBookingStatusAsync(Guid bookingId,BookingStatus  status);
         Task CancelBookingAsync(Guid bookingId);
         Task<List<BookingResponseDto>> GetBookingsByUserAsync(Guid userId);
         Task<List<BookingResponseDto>> GetBookingsByFieldAsync(Guid fieldId);
         Task<List<BookingResponseDto>> GetBookingsBySportCenterAsync(Guid sportCenterId);
         Task<List<BookingResponseDto>> GetBookingsByDateRangeAsync(DateOnly startDate, DateOnly endDate);
+        Task<List<BookingResponseDto>> GetBookingsByOwnerAsync(Guid ownerId);
+        Task UpdateBookingStatusAsync(Guid bookingId, BookingStatus status);
         Task<List<Guid>> GetBookedSlotIdsAsync(Guid fieldId, DateOnly date);
     }
 }

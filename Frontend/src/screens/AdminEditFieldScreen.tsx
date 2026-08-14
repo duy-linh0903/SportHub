@@ -9,6 +9,9 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -31,12 +34,47 @@ const AdminEditFieldScreen = ({ navigation, route }: { navigation: any; route: a
   const [imageUri, setImageUri] = useState<string | null>(existingField?.imageUrl || null);
   const [loading, setLoading] = useState(false);
 
-  const canSubmit = name.trim().length > 0 && address.trim().length > 0 && price.trim().length > 0;
+  const canSubmit = isEditing 
+    ? name.trim().length > 0 && address.trim().length > 0
+    : name.trim().length > 0 && address.trim().length > 0 && price.trim().length > 0;
+
+  const requestStoragePermission = async () => {
+    if (Platform.OS === 'android') {
+      const permission = Platform.Version >= 33 
+        ? PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES 
+        : PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE;
+      
+      const hasPermission = await PermissionsAndroid.check(permission);
+      if (hasPermission) return true;
+      
+      const status = await PermissionsAndroid.request(permission);
+      return status === 'granted';
+    }
+    return true;
+  };
 
   const handlePickImage = async () => {
-    const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.8 });
-    if (result.assets && result.assets.length > 0) {
-      setImageUri(result.assets[0].uri || null);
+    try {
+      const hasPermission = await requestStoragePermission();
+      if (!hasPermission) {
+        Alert.alert('Lỗi', 'Vui lòng cấp quyền truy cập ảnh để chọn hình.');
+        return;
+      }
+      
+      const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.8 });
+      if (result.didCancel) return;
+      
+      if (result.errorCode) {
+        Alert.alert('Lỗi', result.errorMessage || 'Không thể mở thư viện ảnh');
+        return;
+      }
+      
+      if (result.assets && result.assets.length > 0) {
+        setImageUri(result.assets[0].uri || null);
+      }
+    } catch (error) {
+      console.error('Pick image error:', error);
+      Alert.alert('Lỗi', 'Đã có lỗi xảy ra khi mở thư viện ảnh');
     }
   };
 
@@ -44,8 +82,8 @@ const AdminEditFieldScreen = ({ navigation, route }: { navigation: any; route: a
     setLoading(true);
     try {
       let uploadedUrl = imageUri;
-      // Nếu là ảnh mới chọn từ thiết bị (không phải http)
-      if (imageUri && !imageUri.startsWith('http')) {
+      // Nếu là ảnh mới chọn từ thiết bị (bắt đầu bằng file:// hoặc content://)
+      if (imageUri && (imageUri.startsWith('file://') || imageUri.startsWith('content://'))) {
         const file = {
           uri: imageUri,
           name: `field_${Date.now()}.jpg`,
@@ -61,7 +99,20 @@ const AdminEditFieldScreen = ({ navigation, route }: { navigation: any; route: a
           name,
           address,
           description,
+          images: uploadedUrl ? [{ url: uploadedUrl }] : [],
         });
+
+        // Cập nhật giá cho Field (Sân con)
+        const scFields = await fieldsApi.getBySportCenter(existingField.id);
+        if (scFields.length > 0) {
+          await fieldsApi.update(scFields[0].fieldId, {
+            sportCenterId: existingField.id,
+            name: name,
+            type: fieldType,
+            pricePerSlot: parseFloat(price),
+          });
+        }
+
         Alert.alert('Thành công', 'Đã cập nhật thông tin sân.', [
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
@@ -86,9 +137,10 @@ const AdminEditFieldScreen = ({ navigation, route }: { navigation: any; route: a
           { text: 'OK', onPress: () => navigation.goBack() }
         ]);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save field error:', error);
-      Alert.alert('Lỗi', 'Không thể lưu thông tin. Vui lòng thử lại.');
+      const msg = error.response ? `Mã lỗi: ${error.response.status}` : error.message;
+      Alert.alert('Lỗi', `Không thể lưu thông tin. ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -104,8 +156,12 @@ const AdminEditFieldScreen = ({ navigation, route }: { navigation: any; route: a
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          <Text style={styles.sectionTitle}>Thông tin cơ bản</Text>
 
         <Text style={styles.label}>Tên sân</Text>
         <TextInput
@@ -116,21 +172,35 @@ const AdminEditFieldScreen = ({ navigation, route }: { navigation: any; route: a
           onChangeText={setName}
         />
 
-        <Text style={styles.label}>Loại sân</Text>
-        <View style={styles.typeRow}>
-          {FIELD_TYPES.map((type) => {
-            const isSelected = fieldType === type;
-            return (
-              <TouchableOpacity
-                key={type}
-                style={[styles.typeChip, isSelected && styles.typeChipSelected]}
-                onPress={() => setFieldType(type)}
-              >
-                <Text style={[styles.typeChipText, isSelected && styles.typeChipTextSelected]}>{type}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+        {!isEditing && (
+          <>
+            <Text style={styles.label}>Loại sân</Text>
+            <View style={styles.typeRow}>
+              {FIELD_TYPES.map(t => (
+                <TouchableOpacity
+                  key={t}
+                  style={[styles.typeChip, fieldType === t && styles.typeChipSelected]}
+                  onPress={() => setFieldType(t)}
+                >
+                  <Text style={[styles.typeChipText, fieldType === t && styles.typeChipTextSelected]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.label}>Giá trung bình mỗi giờ (VNĐ) <Text style={{ color: 'red' }}>*</Text></Text>
+            <View style={styles.priceInputWrap}>
+              <TextInput
+                style={styles.priceInput}
+                placeholder="VD: 150000"
+                placeholderTextColor="#999"
+                keyboardType="numeric"
+                value={price}
+                onChangeText={setPrice}
+              />
+              <Text style={styles.priceUnit}>đ/giờ</Text>
+            </View>
+          </>
+        )}
 
         <Text style={styles.label}>Địa chỉ</Text>
         <TextInput
@@ -196,6 +266,7 @@ const AdminEditFieldScreen = ({ navigation, route }: { navigation: any; route: a
           )}
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };

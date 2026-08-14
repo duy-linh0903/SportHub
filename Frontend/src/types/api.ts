@@ -112,6 +112,7 @@ export interface ServiceResponseDto {
   name: string;
   price: number;
   description?: string | null;
+  sportCenterId?: string | null;
 }
 
 export interface CreateServiceDto {
@@ -119,6 +120,7 @@ export interface CreateServiceDto {
   price: number;
   type: string;
   description?: string | null;
+  sportCenterId?: string | null;
 }
 
 export interface UpdateServiceDto {
@@ -126,6 +128,7 @@ export interface UpdateServiceDto {
   price?: number;
   type?: string;
   description?: string | null;
+  sportCenterId?: string | null;
 }
 
 // Reviews
@@ -133,7 +136,10 @@ export interface ReviewResponseDto {
   rating: number;
   comment: string;
   userId: string;
+  userName?: string;
   sportCenterId: string;
+  sportCenterName?: string;
+  createdAt: string;
 }
 
 export interface CreateReviewDto {

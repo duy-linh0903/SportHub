@@ -14,5 +14,6 @@ namespace SportHub.DTOs.SportCenter
         public DateTime CreatedAt { get; set; }
         public List<SportCenterImages> images { get; set; }
         public double MinPrice { get; set; }
+        public string Status { get; set; }
     }
 }
