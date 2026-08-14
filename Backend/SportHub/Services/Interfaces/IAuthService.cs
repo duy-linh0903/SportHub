@@ -7,9 +7,5 @@ namespace SportHub.Services.Interfaces
         Task<LoginResponseDto> LoginAsync(LoginRequestDto loginRequestDto);
         Task<LoginResponseDto> RegisterAsync(RegisterRequestDto registerRequestDto);
         Task ChangePasswordAsync(Guid userId, ChangePasswordDto dto);
-        Task ForgotPasswordAsync(ForgotPasswordRequestDto dto);
-        Task VerifyOtpAsync(VerifyOtpRequestDto dto);
-        Task ResetPasswordAsync(ResetPasswordRequestDto dto);
-        Task<LoginResponseDto> ExternalLoginAsync(ExternalLoginRequestDto dto);
     }
 }

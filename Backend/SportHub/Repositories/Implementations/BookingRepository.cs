@@ -16,22 +16,12 @@ namespace SportHub.Repositories.Implementations
 
         public async Task<List<Bookings>> GetAllAsync()
         {
-            return await _context.Bookings
-                .Include(b => b.Fields)
-                    .ThenInclude(f => f.SportCenter)
-                .Include(b => b.BookingSlots)
-                    .ThenInclude(bs => bs.TimeSlots)
-                .ToListAsync();
+            return await _context.Bookings.ToListAsync();
         }
 
         public async Task<Bookings?> GetByIdAsync(Guid id)
         {
-            return await _context.Bookings
-                .Include(b => b.Fields)
-                    .ThenInclude(f => f.SportCenter)
-                .Include(b => b.BookingSlots)
-                    .ThenInclude(bs => bs.TimeSlots)
-                .FirstOrDefaultAsync(b => b.Id == id);
+            return await _context.Bookings.FirstOrDefaultAsync(b => b.Id == id);
         }
 
         public async Task<Bookings?> GetByCheckInCodeAsync(string code)
@@ -64,9 +54,6 @@ namespace SportHub.Repositories.Implementations
         {
             return await _context.Bookings
                 .Include(b => b.Fields)
-                    .ThenInclude(f => f.SportCenter)
-                .Include(b => b.BookingSlots)
-                    .ThenInclude(bs => bs.TimeSlots)
                 .Where(b => b.Fields.SportCenterId == centerId)
                 .ToListAsync();
         }
@@ -74,10 +61,6 @@ namespace SportHub.Repositories.Implementations
         public async Task<List<Bookings>> GetByUserId(Guid userId)
         {
             return await _context.Bookings
-                .Include(b => b.Fields)
-                    .ThenInclude(f => f.SportCenter)
-                .Include(b => b.BookingSlots)
-                    .ThenInclude(bs => bs.TimeSlots)
                 .Where(b => b.UserId == userId)
                 .ToListAsync();
         }
@@ -85,10 +68,6 @@ namespace SportHub.Repositories.Implementations
         public async Task<List<Bookings>> GetByFieldId(Guid fieldId)
         {
             return await _context.Bookings
-                .Include(b => b.Fields)
-                    .ThenInclude(f => f.SportCenter)
-                .Include(b => b.BookingSlots)
-                    .ThenInclude(bs => bs.TimeSlots)
                 .Where(b => b.FieldId == fieldId)
                 .ToListAsync();
         }
@@ -96,10 +75,6 @@ namespace SportHub.Repositories.Implementations
         public async Task<List<Bookings>> GetByDateRange(DateOnly startDate, DateOnly endDate)
         {
             return await _context.Bookings
-                .Include(b => b.Fields)
-                    .ThenInclude(f => f.SportCenter)
-                .Include(b => b.BookingSlots)
-                    .ThenInclude(bs => bs.TimeSlots)
                 .Where(b => b.BookingDate >= startDate && b.BookingDate <= endDate)
                 .ToListAsync();
         }
@@ -142,16 +117,6 @@ namespace SportHub.Repositories.Implementations
                 (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed));
         }
 
-        public async Task<List<Guid>> GetBookedSlotIdsAsync(Guid fieldId, DateOnly bookingDate)
-        {
-            return await _context.BookingSlots
-                .Where(bs => bs.Bookings.FieldId == fieldId &&
-                             bs.Bookings.BookingDate == bookingDate &&
-                             (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed))
-                .Select(bs => bs.SlotId)
-                .ToListAsync();
-        }
-
         public async Task CreateBookingWithDetailsAsync(Bookings booking, List<BookingServices> bookingServices, List<BookingSlots> bookingSlots)
         {
             await using var trx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
@@ -187,6 +152,17 @@ namespace SportHub.Repositories.Implementations
                 await trx.RollbackAsync();
                 throw;
             }
+        }
+
+        public async Task<List<Guid>> GetBookedSlotIdsAsync(Guid fieldId, DateOnly date)
+        {
+            return await _context.BookingSlots
+                .Where(bs =>
+                    bs.Bookings.FieldId == fieldId &&
+                    bs.Bookings.BookingDate == date &&
+                    (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed))
+                .Select(bs => bs.SlotId)
+                .ToListAsync();
         }
     }
 }

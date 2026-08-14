@@ -26,6 +26,7 @@ namespace SportHub.Controllers
             return Ok(users);
         }
 
+        [Authorize]
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<UserResponseDto>> GetById(Guid id)
         {
@@ -35,8 +36,7 @@ namespace SportHub.Controllers
                 return Forbid();
             }
 
-            var isAdmin = User.IsInRole("Admin");
-            if (!isAdmin && userId != id)
+            if (!User.IsInRole("Admin") && userId != id)
             {
                 return Forbid();
             }
@@ -61,6 +61,7 @@ namespace SportHub.Controllers
             return Ok(user);
         }
 
+        [Authorize]
         [HttpPut("{id:guid}")]
         public async Task<ActionResult<UserResponseDto>> Update(Guid id, [FromBody] UpdateProfileDto dto)
         {
@@ -70,8 +71,7 @@ namespace SportHub.Controllers
                 return Forbid();
             }
 
-            var isAdmin = User.IsInRole("Admin");
-            if (!isAdmin && userId != id)
+            if (!User.IsInRole("Admin") && userId != id)
             {
                 return Forbid();
             }
@@ -85,6 +85,7 @@ namespace SportHub.Controllers
             return Ok(updatedUser);
         }
 
+        [Authorize]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
@@ -94,8 +95,7 @@ namespace SportHub.Controllers
                 return Forbid();
             }
 
-            var isAdmin = User.IsInRole("Admin");
-            if (!isAdmin && userId != id)
+            if (!User.IsInRole("Admin") && userId != id)
             {
                 return Forbid();
             }

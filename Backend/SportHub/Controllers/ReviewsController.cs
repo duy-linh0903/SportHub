@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportHub.DTOs.Review;
@@ -40,9 +41,15 @@ namespace SportHub.Controllers
         [HttpPost]
         public async Task<ActionResult<ReviewResponseDto>> Create([FromBody] CreateReviewDto dto)
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return Forbid();
+            }
+
             try
             {
-                var result = await _reviewService.CreateReviewAsync(dto, dto.UserId);
+                var result = await _reviewService.CreateReviewAsync(dto, userId);
                 return Created(string.Empty, result);
             }
             catch (Exception ex)

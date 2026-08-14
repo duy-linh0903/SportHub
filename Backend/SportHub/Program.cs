@@ -1,16 +1,13 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using SportHub.Data;
-using SportHub.Models;
 using SportHub.Repositories.Implementations;
 using SportHub.Repositories.Interfaces;
 using SportHub.Services.Implementations;
 using SportHub.Services.Interfaces;
-using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using System.Text;
-using SportHub.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -35,10 +32,7 @@ builder.Services.AddScoped<IServiceItemService, ServiceItemService>();
 builder.Services.AddScoped<ISportCenterService, SportCenterService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.AddScoped<IJwtHelper, JwtHelper>();
-builder.Services.AddMemoryCache();
-builder.Services.AddHostedService<SportHub.Services.BackgroundServices.AutoCancelBookingService>();
 
 // Add services to the container.
 builder.Services.AddCors(options =>
@@ -99,74 +93,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         ValidateIssuerSigningKey = true,
         ValidIssuer = builder.Configuration["Jwt:Issuer"],
         ValidAudience = builder.Configuration["Jwt:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
-        RoleClaimType = ClaimTypes.Role
-    };
-    
-    options.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = context =>
-        {
-            var accessToken = context.Request.Query["access_token"];
-            var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/notifications"))
-            {
-                context.Token = accessToken;
-            }
-            return Task.CompletedTask;
-        }
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key))
     };
 });
 builder.Services.AddAuthorization();
 var app = builder.Build();
-
+// Ensure default roles exist at startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-    var roles = new[]
+    if (!db.Roles.Any())
     {
-        new Roles { Id = Guid.Parse("00000000-0000-0000-0000-000000000001"), RoleName = "User" },
-        new Roles { Id = Guid.Parse("00000000-0000-0000-0000-000000000002"), RoleName = "Admin" }
-    };
-
-    foreach (var role in roles)
-    {
-        if (!db.Roles.Any(r => r.RoleName == role.RoleName))
-        {
-            db.Roles.Add(role);
-        }
-    }
-
-    db.SaveChanges();
-
-    var adminEmail = "admin@sporthub.com";
-    var normalUserEmail = "user@sporthub.com";
-    if (!db.Users.Any(u => u.Email == adminEmail))
-    {
-        var adminUser = new Users
-        {
-            Id = Guid.Parse("00000000-0000-0000-0000-000000000010"),
-            Name = "Admin",
-            Email = adminEmail,
-            PhoneNumber = "0123456789",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
-            AvatarUrl = string.Empty,
-            Status = UserStatus.Active,
-            CreatedAt = DateTime.Parse("2026-08-05T00:00:00")
-        };
-
-        db.Users.Add(adminUser);
-        db.SaveChanges();
-
-        var adminRole = db.Roles.First(r => r.RoleName == "Admin");
-        db.UserRoles.Add(new UserRoles
-        {
-            UserId = adminUser.Id,
-            RoleId = adminRole.Id
-        });
+        db.Roles.AddRange(new SportHub.Models.Roles { Id = Guid.Parse("00000000-0000-0000-0000-000000000001"), RoleName = "User" },
+                         new SportHub.Models.Roles { Id = Guid.Parse("00000000-0000-0000-0000-000000000002"), RoleName = "Admin" });
         db.SaveChanges();
     }
+<<<<<<< HEAD
 
     if (!db.Users.Any(u => u.Email == normalUserEmail))
     {
@@ -396,6 +338,8 @@ using (var scope = app.Services.CreateScope())
         }
     }
     db.SaveChanges();
+=======
+>>>>>>> c3f744ca95e606297d694a299765ad6cfe03397e
 }
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -403,12 +347,9 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-app.UseStaticFiles();
 app.UseMiddleware<SportHub.Middleware.ExceptionMiddleware>();
-app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapHub<NotificationHub>("/hubs/notifications");
 app.Run();

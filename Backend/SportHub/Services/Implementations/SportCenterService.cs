@@ -38,9 +38,9 @@ namespace SportHub.Services.Implementations
         public async Task<SportCenterResponseDto?> GetSportCenterByIdAsync(Guid id)
         {
             var sportCenter = await _sportCenter.GetByIdAsync(id);
-            if (sportCenter==null)
+            if (sportCenter == null)
             {
-                throw new KeyNotFoundException("Sport Center isn't found");
+                return null;
             }
             return new SportCenterResponseDto
             {
@@ -50,7 +50,8 @@ namespace SportHub.Services.Implementations
                 Description = sportCenter.Description,
                 CreatedAt = sportCenter.CreatedAt,
                 images = sportCenter.Images?.ToList(),
-                Status = sportCenter.Status.ToString()
+Status = sportCenter.Status.ToString(),
+                MinPrice = sportCenter.Fields != null && sportCenter.Fields.Any() ? sportCenter.Fields.Min(f => f.PricePerSlot) : 0
             };
         }
 
@@ -61,7 +62,10 @@ namespace SportHub.Services.Implementations
                 Name = sportCenterDto.Name,
                 Address = sportCenterDto.Address,
                 Description = sportCenterDto.Description,
-                Images = sportCenterDto.images?.Select(i => new SportCenterImages { Url = i.Url }).ToList()
+Images = sportCenterDto.images?.Select(image => new SportCenterImages
+                {
+                    Url = image.Url
+                }).ToList() ?? new List<SportCenterImages>()
             };
             await _sportCenter.AddAsync(sportCenter);
             return new SportCenterResponseDto
@@ -83,18 +87,15 @@ namespace SportHub.Services.Implementations
             {
                 throw new KeyNotFoundException("Sport center isn't found");
             }
-            var updateSport = new SportCenters
+sportCenter.Name = sportCenterDto.Name;
+            sportCenter.Address = sportCenterDto.Address;
+            sportCenter.Description = sportCenterDto.Description;
+            sportCenter.Images = sportCenterDto.images?.Select(image => new SportCenterImages
             {
-                Id = id,
-                Name = sportCenterDto.Name,
-                Address = sportCenterDto.Address,
-                Description = sportCenterDto.Description,
-                Images = sportCenterDto.images?.Select(i => new SportCenterImages { Url = i.Url }).ToList()
-            };
-            await _sportCenter.UpdateAsync(updateSport);
-            
-            // Re-fetch to get updated values including standard formatting if any
-            var updated = await _sportCenter.GetByIdAsync(id);
+                Url = image.Url,
+                SportCenterId = id
+            }).ToList() ?? sportCenter.Images ?? new List<SportCenterImages>();
+            await _sportCenter.UpdateAsync(sportCenter);
             return new SportCenterResponseDto
             {
                 SportCenterId = updated.Id,
@@ -109,12 +110,12 @@ namespace SportHub.Services.Implementations
 
         public async Task DeleteSportCenterAsync(Guid id)
         {
+var sportCenter = await _sportCenter.GetByIdAsync(id);
+            if ( sportCenter == null)
+            {
+                throw new KeyNotFoundException("Sport center isn't found");
+            }
             await _sportCenter.DeleteAsync(id);
-        }
-
-        public async Task RestoreSportCenterAsync(Guid id)
-        {
-            await _sportCenter.RestoreAsync(id);
         }
 
         public async Task<List<SportCenterResponseDto>> SearchSportCentersAsync(string name)

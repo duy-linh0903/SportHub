@@ -34,9 +34,9 @@ namespace SportHub.Services.Implementations
         public async Task<FieldResponseDto?> GetFieldByIdAsync(Guid id)
         {
             var field = await _fieldRepository.GetByIdAsync(id);
-            if (field==null)
+            if (field == null)
             {
-                throw new KeyNotFoundException("Field isn't found");
+                return null;
             }
             return new FieldResponseDto
             {
@@ -69,10 +69,11 @@ namespace SportHub.Services.Implementations
         public async Task<FieldResponseDto?> UpdateFieldAsync(Guid id, UpdateFieldDto fieldDto)
         {
             var field = await _fieldRepository.GetByIdAsync(id);
-            if (field==null)
+            if (field == null)
             {
                 throw new KeyNotFoundException("Field isn't found");
             }
+            field.SportCenterId = fieldDto.SportCenterId;
             field.Name = fieldDto.Name;
             field.Type = fieldDto.Type;
             field.PricePerSlot = fieldDto.PricePerSlot;

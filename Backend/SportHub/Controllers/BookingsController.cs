@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportHub.DTOs.Booking;
@@ -8,7 +9,7 @@ namespace SportHub.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Microsoft.AspNetCore.Authorization.Authorize]
     public class BookingsController : ControllerBase
     {
         private readonly IBookingService _bookingService;
@@ -16,6 +17,16 @@ namespace SportHub.Controllers
         public BookingsController(IBookingService bookingService)
         {
             _bookingService = bookingService;
+        }
+
+        private Guid? GetCurrentUserId()
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return null;
+            }
+            return userId;
         }
 
         [Authorize(Roles = "Admin")]
@@ -40,6 +51,7 @@ namespace SportHub.Controllers
             return Ok(result);
         }
 
+        [Authorize]
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<BookingResponseDto>> GetById(Guid id)
         {
@@ -49,9 +61,13 @@ namespace SportHub.Controllers
                 return NotFound();
             }
 
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var isAdmin = User.IsInRole("Admin");
-            if (!isAdmin && booking.UserId.ToString() != userIdString)
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return Forbid();
+            }
+
+            if (!User.IsInRole("Admin") && booking.UserId != currentUserId)
             {
                 return Forbid();
             }
@@ -73,17 +89,17 @@ namespace SportHub.Controllers
             }
         }
 
-        [Authorize(Roles = "User,Admin")]
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<BookingResponseDto>> Create([FromBody] CreateBookingDto bookingDto)
         {
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userIdString) || !Guid.TryParse(userIdString, out Guid userId))
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
             {
-                return Unauthorized();
+                return Forbid();
             }
 
-            var createdBooking = await _bookingService.CreateBookingAsync(bookingDto, userId);
+            var createdBooking = await _bookingService.CreateBookingAsync(bookingDto, userId.Value);
             return CreatedAtAction(nameof(GetById), new { id = createdBooking.BookingId }, createdBooking);
         }
 
@@ -95,16 +111,23 @@ namespace SportHub.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "User,Admin")]
+        [Authorize]
         [HttpDelete("{bookingId:guid}")]
         public async Task<IActionResult> Cancel(Guid bookingId)
         {
             var booking = await _bookingService.GetBookingByIdAsync(bookingId);
-            if (booking == null) return NotFound();
+            if (booking == null)
+            {
+                return NotFound();
+            }
 
-            var userIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var isAdmin = User.IsInRole("Admin");
-            if (!isAdmin && booking.UserId.ToString() != userIdString)
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return Forbid();
+            }
+
+            if (!User.IsInRole("Admin") && booking.UserId != currentUserId)
             {
                 return Forbid();
             }
@@ -113,13 +136,17 @@ namespace SportHub.Controllers
             return NoContent();
         }
 
-        [Authorize(Roles = "Admin,User")]
+        [Authorize]
         [HttpGet("user/{userId:guid}")]
         public async Task<ActionResult<List<BookingResponseDto>>> GetByUser(Guid userId)
         {
-            var currentUserIdString = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var isAdmin = User.IsInRole("Admin");
-            if (!isAdmin && userId.ToString() != currentUserIdString)
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+            {
+                return Forbid();
+            }
+
+            if (!User.IsInRole("Admin") && userId != currentUserId)
             {
                 return Forbid();
             }
@@ -150,14 +177,6 @@ namespace SportHub.Controllers
         {
             var bookings = await _bookingService.GetBookingsByDateRangeAsync(startDate, endDate);
             return Ok(bookings);
-        }
-
-        [AllowAnonymous]
-        [HttpGet("booked-slots")]
-        public async Task<ActionResult<List<Guid>>> GetBookedSlots([FromQuery] Guid fieldId, [FromQuery] DateOnly date)
-        {
-            var slots = await _bookingService.GetBookedSlotIdsAsync(fieldId, date);
-            return Ok(slots);
         }
     }
 }
