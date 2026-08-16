@@ -58,7 +58,7 @@ const AdminProfileScreen = ({ navigation }: { navigation: any }) => {
 
   const handleSaveProfile = async () => {
     try {
-      await usersApi.updateProfile({ name, email, phoneNumber: phone });
+      await usersApi.update(userId!, { name, email, phoneNumber: phone });
       Alert.alert('Thành công', 'Đã cập nhật thông tin.');
       setIsEditing(false);
     } catch (error) {

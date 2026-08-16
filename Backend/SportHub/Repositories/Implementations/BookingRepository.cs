@@ -16,12 +16,22 @@ namespace SportHub.Repositories.Implementations
 
         public async Task<List<Bookings>> GetAllAsync()
         {
-            return await _context.Bookings.ToListAsync();
+            return await _context.Bookings
+                .Include(b => b.Fields)
+                    .ThenInclude(f => f.SportCenter)
+                .Include(b => b.BookingSlots)
+                    .ThenInclude(bs => bs.TimeSlots)
+                .ToListAsync();
         }
 
         public async Task<Bookings?> GetByIdAsync(Guid id)
         {
-            return await _context.Bookings.FirstOrDefaultAsync(b => b.Id == id);
+            return await _context.Bookings
+                .Include(b => b.Fields)
+                    .ThenInclude(f => f.SportCenter)
+                .Include(b => b.BookingSlots)
+                    .ThenInclude(bs => bs.TimeSlots)
+                .FirstOrDefaultAsync(b => b.Id == id);
         }
 
         public async Task<Bookings?> GetByCheckInCodeAsync(string code)
@@ -61,6 +71,10 @@ namespace SportHub.Repositories.Implementations
         public async Task<List<Bookings>> GetByUserId(Guid userId)
         {
             return await _context.Bookings
+                .Include(b => b.Fields)
+                    .ThenInclude(f => f.SportCenter)
+                .Include(b => b.BookingSlots)
+                    .ThenInclude(bs => bs.TimeSlots)
                 .Where(b => b.UserId == userId)
                 .ToListAsync();
         }

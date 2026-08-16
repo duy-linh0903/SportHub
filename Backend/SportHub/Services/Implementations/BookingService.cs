@@ -236,7 +236,15 @@ namespace SportHub.Services.Implementations
                 Status = booking.Status,
                 TotalPrice = booking.TotalPrice,
                 CheckInCode = booking.CheckInCode,
-                CreatedAt = booking.CreatedAt
+                CreatedAt = booking.CreatedAt,
+                FieldName = booking.Fields?.Name ?? string.Empty,
+                FieldType = booking.Fields?.Type ?? string.Empty,
+                SportCenterId = booking.Fields?.SportCenterId ?? Guid.Empty,
+                SportCenterName = booking.Fields?.SportCenter?.Name ?? string.Empty,
+                SportCenterAddress = booking.Fields?.SportCenter?.Address ?? string.Empty,
+                TimeSlots = booking.BookingSlots != null && booking.BookingSlots.Any()
+                    ? string.Join(", ", booking.BookingSlots.Where(bs => bs.TimeSlots != null).Select(bs => $"{bs.TimeSlots.StartTime:hh\\:mm}-{bs.TimeSlots.EndTime:hh\\:mm}"))
+                    : string.Empty
             };
         }
 

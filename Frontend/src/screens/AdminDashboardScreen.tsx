@@ -89,12 +89,20 @@ const AdminDashboardScreen = ({ navigation }: { navigation: any }) => {
           <Text style={styles.headerGreeting}>Xin chào,</Text>
           <Text style={styles.headerTitle}>Quản lý hệ thống</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.avatarBtn}
-          onPress={() => navigation.navigate('AdminProfile')}
-        >
-          <Text style={styles.avatarText}>A</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity 
+            style={{ marginRight: 16, position: 'relative' }}
+            onPress={() => navigation.navigate('Notification')}
+          >
+            <Ionicons name="notifications-outline" size={24} color="#0f172a" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.avatarBtn}
+            onPress={() => navigation.navigate('AdminProfile')}
+          >
+            <Text style={styles.avatarText}>A</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>

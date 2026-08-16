@@ -36,25 +36,28 @@ namespace SportHub.Repositories.Implementations
 
         public async Task UpdateAsync(SportCenters updateSport)
         {
-            var sport = await _context.SportCenters.Include(s => s.Images).FirstOrDefaultAsync(s => s.Id == updateSport.Id);
+            var sport = await _context.SportCenters.FirstOrDefaultAsync(s => s.Id == updateSport.Id);
             if (sport !=  null)
             {
                 sport.Name = updateSport.Name;
                 sport.Address = updateSport.Address;
                 sport.Description = updateSport.Description;
                 
-                if (updateSport.Images != null)
+                var oldImages = await _context.SportCenterImages.Where(i => i.SportCenterId == sport.Id).ToListAsync();
+                if (oldImages.Any())
                 {
-                    if (sport.Images != null && sport.Images.Any())
+                    _context.SportCenterImages.RemoveRange(oldImages);
+                }
+                
+                if (updateSport.Images != null && updateSport.Images.Any())
+                {
+                    var newImages = updateSport.Images.Select(img => new SportCenterImages
                     {
-                        _context.SportCenterImages.RemoveRange(sport.Images);
-                    }
-                    foreach(var img in updateSport.Images)
-                    {
-                        img.Id = Guid.Empty; // Ensure it's treated as new
-                        img.SportCenterId = sport.Id;
-                    }
-                    sport.Images = updateSport.Images;
+                        Id = Guid.NewGuid(),
+                        SportCenterId = sport.Id,
+                        Url = img.Url
+                    }).ToList();
+                    await _context.SportCenterImages.AddRangeAsync(newImages);
                 }
 
                 await _context.SaveChangesAsync();

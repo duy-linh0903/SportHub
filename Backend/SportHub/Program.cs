@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using SportHub.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -108,8 +109,8 @@ using (var scope = app.Services.CreateScope())
                          new SportHub.Models.Roles { Id = Guid.Parse("00000000-0000-0000-0000-000000000002"), RoleName = "Admin" });
         db.SaveChanges();
     }
-<<<<<<< HEAD
 
+    var normalUserEmail = "user@sporthub.com";
     if (!db.Users.Any(u => u.Email == normalUserEmail))
     {
         var normalUser = new Users
@@ -338,8 +339,7 @@ using (var scope = app.Services.CreateScope())
         }
     }
     db.SaveChanges();
-=======
->>>>>>> c3f744ca95e606297d694a299765ad6cfe03397e
+
 }
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

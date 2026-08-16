@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using SportHub.Models;
 
 namespace SportHub.Data
@@ -18,6 +18,7 @@ namespace SportHub.Data
         public DbSet<TimeSlots> TimeSlots { get; set; }
         public DbSet<BookingSlots> BookingSlots { get; set; }
         public DbSet<Reviews> Reviews { get; set; }
+        public DbSet<SportCenterImages> SportCenterImages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -45,7 +46,7 @@ namespace SportHub.Data
 
             modelBuilder.Entity<Fields>()
                 .HasOne(f => f.SportCenter)
-                .WithMany()
+                .WithMany(s => s.Fields)
                 .HasForeignKey(f => f.SportCenterId);
 
             modelBuilder.Entity<Bookings>()
@@ -90,7 +91,7 @@ namespace SportHub.Data
 
             modelBuilder.Entity<BookingSlots>()
                 .HasOne(bs => bs.Bookings)
-                .WithMany()
+                .WithMany(b => b.BookingSlots)
                 .HasForeignKey(bs => bs.BookingId);
 
             modelBuilder.Entity<BookingSlots>()

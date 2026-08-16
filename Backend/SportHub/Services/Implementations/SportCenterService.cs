@@ -87,24 +87,33 @@ Images = sportCenterDto.images?.Select(image => new SportCenterImages
             {
                 throw new KeyNotFoundException("Sport center isn't found");
             }
-sportCenter.Name = sportCenterDto.Name;
-            sportCenter.Address = sportCenterDto.Address;
-            sportCenter.Description = sportCenterDto.Description;
-            sportCenter.Images = sportCenterDto.images?.Select(image => new SportCenterImages
+            var updateModel = new SportCenters
             {
-                Url = image.Url,
-                SportCenterId = id
-            }).ToList() ?? sportCenter.Images ?? new List<SportCenterImages>();
-            await _sportCenter.UpdateAsync(sportCenter);
+                Id = id,
+                Name = sportCenterDto.Name,
+                Address = sportCenterDto.Address,
+                Description = sportCenterDto.Description,
+                Images = sportCenterDto.images?.Select(image => new SportCenterImages
+                {
+                    Url = image.Url,
+                    SportCenterId = id
+                }).ToList() ?? new List<SportCenterImages>()
+            };
+            
+            await _sportCenter.UpdateAsync(updateModel);
+            
+            // Refetch to get updated status and dates
+            sportCenter = await _sportCenter.GetByIdAsync(id);
+            
             return new SportCenterResponseDto
             {
-                SportCenterId = updated.Id,
-                Name = updated.Name,
-                Address = updated.Address,
-                Description = updated.Description,
-                CreatedAt = updated.CreatedAt,
-                images = updated.Images?.ToList(),
-                Status = updated.Status.ToString()
+                SportCenterId = sportCenter!.Id,
+                Name = sportCenter.Name,
+                Address = sportCenter.Address,
+                Description = sportCenter.Description,
+                CreatedAt = sportCenter.CreatedAt,
+                images = sportCenter.Images?.ToList(),
+                Status = sportCenter.Status.ToString()
             };
         }
 
@@ -116,6 +125,15 @@ var sportCenter = await _sportCenter.GetByIdAsync(id);
                 throw new KeyNotFoundException("Sport center isn't found");
             }
             await _sportCenter.DeleteAsync(id);
+        }
+        public async Task RestoreSportCenterAsync(Guid id)
+        {
+            var sportCenter = await _sportCenter.GetByIdAsync(id);
+            if (sportCenter == null)
+            {
+                throw new KeyNotFoundException("Sport center isn't found");
+            }
+            await _sportCenter.RestoreAsync(id);
         }
 
         public async Task<List<SportCenterResponseDto>> SearchSportCentersAsync(string name)
