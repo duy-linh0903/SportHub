@@ -13,6 +13,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { bookingsApi } from '../api/bookingsApi';
 import { CreateBookingDto } from '../types/api';
 import { useAuthStore } from '../store/useAuthStore';
+import { useNotificationStore } from '../store/useNotificationStore';
 
 // ===== Dummy Data for Payment =====
 interface PaymentMethod {

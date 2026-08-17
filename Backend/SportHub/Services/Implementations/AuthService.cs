@@ -62,6 +62,7 @@ namespace SportHub.Services.Implementations
                 PhoneNumber = registerRequestDto.PhoneNumber,
                 Email = registerRequestDto.Email,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(registerRequestDto.Password),
+                AvatarUrl = string.Empty,
                 Status = UserStatus.Active
             };
             await _userRepository.AddAsync(user);

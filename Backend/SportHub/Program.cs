@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 using SportHub.Models;
+using SportHub.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -351,5 +352,7 @@ app.UseMiddleware<SportHub.Middleware.ExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseCors("AllowAll");
 app.MapControllers();
+app.MapHub<NotificationHub>("/hubs/notifications");
 app.Run();

@@ -1,6 +1,8 @@
 using System.Linq;
+using Microsoft.AspNetCore.SignalR;
 using SportHub.DTOs.Booking;
 using SportHub.DTOs.Service;
+using SportHub.Hubs;
 using SportHub.Models;
 using SportHub.Repositories.Interfaces;
 using SportHub.Services.Interfaces;
@@ -13,17 +15,20 @@ namespace SportHub.Services.Implementations
         private readonly IFieldRepository _fieldRepository;
         private readonly IServiceRepository _serviceRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
         public BookingService(
             IBookingRepository bookingRepository,
             IFieldRepository fieldRepository,
             IServiceRepository serviceRepository,
-            IUserRepository userRepository)
+            IUserRepository userRepository,
+            IHubContext<NotificationHub> hubContext)
         {
             _bookingRepository = bookingRepository;
             _fieldRepository = fieldRepository;
             _serviceRepository = serviceRepository;
             _userRepository = userRepository;
+            _hubContext = hubContext;
         }
 
         public async Task<List<BookingResponseDto>> GetAllBookingsAsync()
@@ -152,6 +157,17 @@ namespace SportHub.Services.Implementations
 
             await _bookingRepository.CreateBookingWithDetailsAsync(booking, bookingServices, bookingSlots);
 
+            // Send real-time notification to user
+            try
+            {
+                await _hubContext.Clients.Group(userId.ToString())
+                    .SendAsync("ReceiveNotification",
+                        "Đặt sân thành công!",
+                        $"Bạn đã đặt sân {field.Name} ngày {bookingDto.BookingDate}. Mã check-in: {booking.CheckInCode}",
+                        booking.Id.ToString());
+            }
+            catch (Exception) { /* Don't fail booking if notification fails */ }
+
             return BookingServiceDto(booking);
         }
 
@@ -184,6 +200,24 @@ namespace SportHub.Services.Implementations
             }
 
             await _bookingRepository.UpdateStatusAsync(bookingId, status.ToString());
+
+            // Send real-time notification to user about status change
+            try
+            {
+                var statusText = status switch
+                {
+                    BookingStatus.Confirmed => "đã được xác nhận",
+                    BookingStatus.Cancelled => "đã bị hủy",
+                    BookingStatus.Completed => "đã hoàn thành",
+                    _ => status.ToString()
+                };
+                await _hubContext.Clients.Group(booking.UserId.ToString())
+                    .SendAsync("ReceiveNotification",
+                        "Cập nhật đặt sân",
+                        $"Đơn đặt sân của bạn {statusText}.",
+                        bookingId.ToString());
+            }
+            catch (Exception) { /* Don't fail status update if notification fails */ }
         }
 
         public async Task CancelBookingAsync(Guid bookingId)
