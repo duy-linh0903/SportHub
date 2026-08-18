@@ -45,11 +45,16 @@ namespace SportHub.Controllers
         [HttpPut("{id:guid}")]
         public async Task<ActionResult<SportCenterResponseDto>> Update(Guid id, [FromBody] UpdateSportCenterDto dto)
         {
+            var ownerId = GetCurrentUserId();
+            if (!ownerId.HasValue) return Unauthorized();
+
+            var sportCenter = await _sportCenterService.GetSportCenterByIdAsync(id);
+            if (sportCenter == null) return NotFound();
+            
+            // Check if current Admin is the Owner
+            if (sportCenter.OwnerId != ownerId.Value) return Forbid();
+
             var result = await _sportCenterService.UpdateSportCenterAsync(id, dto);
-            if (result == null)
-            {
-                return NotFound();
-            }
             return Ok(result);
         }
 
@@ -57,6 +62,14 @@ namespace SportHub.Controllers
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {
+            var ownerId = GetCurrentUserId();
+            if (!ownerId.HasValue) return Unauthorized();
+
+            var sportCenter = await _sportCenterService.GetSportCenterByIdAsync(id);
+            if (sportCenter == null) return NotFound();
+            
+            if (sportCenter.OwnerId != ownerId.Value) return Forbid();
+
             await _sportCenterService.DeleteSportCenterAsync(id);
             return NoContent();
         }
@@ -65,6 +78,14 @@ namespace SportHub.Controllers
         [HttpPut("{id:guid}/restore")]
         public async Task<IActionResult> Restore(Guid id)
         {
+            var ownerId = GetCurrentUserId();
+            if (!ownerId.HasValue) return Unauthorized();
+
+            var sportCenter = await _sportCenterService.GetSportCenterByIdAsync(id);
+            if (sportCenter == null) return NotFound();
+            
+            if (sportCenter.OwnerId != ownerId.Value) return Forbid();
+
             await _sportCenterService.RestoreSportCenterAsync(id);
             return NoContent();
         }
@@ -87,6 +108,16 @@ namespace SportHub.Controllers
         public async Task<ActionResult<List<SportCenterResponseDto>>> Search([FromQuery] string name)
         {
             return Ok(await _sportCenterService.SearchSportCentersAsync(name));
+        }
+
+        private Guid? GetCurrentUserId()
+        {
+            var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (Guid.TryParse(userIdString, out Guid userId))
+            {
+                return userId;
+            }
+            return null;
         }
     }
 }

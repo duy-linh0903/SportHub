@@ -44,5 +44,26 @@ namespace SportHub.Controllers
             await _authService.ChangePasswordAsync(userId, dto);
             return NoContent();
         }
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequestDto dto)
+        {
+            await _authService.ForgotPasswordAsync(dto);
+            return Ok(new { Message = "OTP sent to your email." });
+        }
+
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequestDto dto)
+        {
+            await _authService.VerifyOtpAsync(dto);
+            return Ok(new { Message = "OTP verified successfully." });
+        }
+
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequestDto dto)
+        {
+            await _authService.ResetPasswordAsync(dto);
+            return Ok(new { Message = "Password reset successfully." });
+        }
     }
 }

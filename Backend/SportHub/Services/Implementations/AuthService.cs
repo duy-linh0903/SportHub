@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using SportHub.Data;
 using SportHub.DTOs.Auth;
@@ -12,12 +13,14 @@ namespace SportHub.Services.Implementations
         private readonly IUserRepository _userRepository;
         private readonly IJwtHelper _jwthelper;
         private readonly AppDbContext _context;
+        private readonly IEmailService _emailService;
 
-        public AuthService(IUserRepository userRepository, IJwtHelper jwthelper, AppDbContext context)
+        public AuthService(IUserRepository userRepository, IJwtHelper jwthelper, AppDbContext context, IEmailService emailService)
         {
             _userRepository = userRepository;
             _jwthelper = jwthelper;
             _context = context;
+            _emailService = emailService;
         }
 
         public async Task<LoginResponseDto> LoginAsync(LoginRequestDto loginRequestDto)
@@ -106,6 +109,96 @@ namespace SportHub.Services.Implementations
 
             var newHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
             await _userRepository.UpdatePasswordAsync(user.Id, newHash);
+        }
+
+        public async Task ForgotPasswordAsync(ForgotPasswordRequestDto dto)
+        {
+            var user = await _userRepository.GetByEmailAsync(dto.Email);
+            if (user == null || user.Status != UserStatus.Active)
+            {
+                throw new Exception("User not found or inactive.");
+            }
+
+            // Generate a 6-digit OTP using cryptographically secure RNG
+            string otp = RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
+
+            // Set OTP, expiry, and reset attempt count
+            user.Otp = otp;
+            user.OtpExpiry = DateTime.UtcNow.AddMinutes(10);
+            user.OtpAttempts = 0;
+            
+            await _userRepository.UpdateAsync(user);
+
+            // Send OTP via email
+            string subject = "Your OTP for Password Reset";
+            string body = $"<p>Your OTP to reset your password is <strong>{otp}</strong>. It is valid for 10 minutes.</p>";
+            await _emailService.SendEmailAsync(user.Email, subject, body);
+        }
+
+        public async Task VerifyOtpAsync(VerifyOtpRequestDto dto)
+        {
+            var user = await _userRepository.GetByEmailAsync(dto.Email);
+            if (user == null)
+            {
+                throw new Exception("Invalid email or OTP.");
+            }
+
+            // Check if OTP has been locked due to too many attempts
+            if (user.Otp == null || user.OtpExpiry == null)
+            {
+                throw new Exception("No OTP requested or OTP has been invalidated. Please request a new one.");
+            }
+
+            // Check expiry
+            if (user.OtpExpiry < DateTime.UtcNow)
+            {
+                user.Otp = null;
+                user.OtpExpiry = null;
+                user.OtpAttempts = 0;
+                await _userRepository.UpdateAsync(user);
+                throw new Exception("OTP has expired. Please request a new one.");
+            }
+
+            // Check brute-force: max 5 attempts
+            if (user.OtpAttempts >= 5)
+            {
+                user.Otp = null;
+                user.OtpExpiry = null;
+                user.OtpAttempts = 0;
+                await _userRepository.UpdateAsync(user);
+                throw new Exception("Too many failed attempts. OTP has been invalidated. Please request a new one.");
+            }
+
+            if (user.Otp != dto.Otp)
+            {
+                user.OtpAttempts = user.OtpAttempts + 1;
+                await _userRepository.UpdateAsync(user);
+                throw new Exception($"Invalid OTP. {5 - user.OtpAttempts} attempts remaining.");
+            }
+
+            // OTP is valid — don't clear yet, will be cleared on password reset
+        }
+
+        public async Task ResetPasswordAsync(ResetPasswordRequestDto dto)
+        {
+            var user = await _userRepository.GetByEmailAsync(dto.Email);
+            if (user == null || user.Otp != dto.Otp || user.OtpExpiry < DateTime.UtcNow)
+            {
+                throw new Exception("Invalid or expired OTP.");
+            }
+
+            if (dto.NewPassword != dto.VerifyPassword)
+            {
+                throw new ArgumentException("New password and verification do not match");
+            }
+
+            var newHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            
+            user.PasswordHash = newHash;
+            user.Otp = null; // Clear OTP after use
+            user.OtpExpiry = null;
+
+            await _userRepository.UpdateAsync(user);
         }
     }
 }

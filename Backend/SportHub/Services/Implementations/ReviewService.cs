@@ -67,6 +67,11 @@ namespace SportHub.Services.Implementations
             if (booking.Status != BookingStatus.Completed)
                 throw new Exception("Chỉ có thể đánh giá sân sau khi đã sử dụng thành công (Check-in).");
 
+            // Check duplicate: prevent user from reviewing the same booking twice
+            var existingReview = await _reviewRepository.GetByBookingAndUserAsync(reviewDto.BookingId, userId);
+            if (existingReview != null)
+                throw new InvalidOperationException("Bạn đã đánh giá Booking này rồi.");
+
             var review = new Reviews
             {
                 Rating = reviewDto.Rating,

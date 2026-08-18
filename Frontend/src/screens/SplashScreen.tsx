@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../App';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,9 +18,7 @@ const SplashScreen = ({ navigation }: Props) => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.logoContainer}>
-        <View style={styles.logoBox}>
-          <Text style={styles.logoText}>SH</Text>
-        </View>
+        <Image source={require('../assets/logo.png')} style={styles.logoImage} />
       </View>
       
       <View style={styles.loadingContainer}>
@@ -44,19 +42,12 @@ const styles = StyleSheet.create({
   logoContainer: {
     flex: 1,
     justifyContent: 'center',
-  },
-  logoBox: {
-    width: 100,
-    height: 100,
-    backgroundColor: '#22c55e',
-    borderRadius: 20,
-    justifyContent: 'center',
     alignItems: 'center',
   },
-  logoText: {
-    color: '#fff',
-    fontSize: 32,
-    fontWeight: 'bold',
+  logoImage: {
+    width: 120,
+    height: 120,
+    borderRadius: 24,
   },
   loadingContainer: {
     alignItems: 'center',

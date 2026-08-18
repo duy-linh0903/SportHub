@@ -111,6 +111,7 @@ export interface ServiceResponseDto {
   serviceId: string;
   name: string;
   price: number;
+  type: string;
   description?: string | null;
   sportCenterId?: string | null;
 }

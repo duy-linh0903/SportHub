@@ -39,6 +39,7 @@ import AdminEditSubFieldScreen from './src/screens/AdminEditSubFieldScreen';
 import AdminReviewListScreen from './src/screens/AdminReviewListScreen';
 import AdminTimeSlotScreen from './src/screens/AdminTimeSlotScreen';
 import AdminServiceScreen from './src/screens/AdminServiceScreen';
+import FavoriteCentersScreen from './src/screens/FavoriteCentersScreen';
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -75,6 +76,7 @@ export type RootStackParamList = {
   AdminReviewList: undefined;
   AdminTimeSlot: { sportCenterId: string; sportCenterName: string } | undefined;
   AdminService: { sportCenterId: string; sportCenterName: string } | undefined;
+  FavoriteCenters: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -115,6 +117,7 @@ export default function App() {
         <Stack.Screen name="AdminReviewList" component={AdminReviewListScreen} />
         <Stack.Screen name="AdminTimeSlot" component={AdminTimeSlotScreen} />
         <Stack.Screen name="AdminService" component={AdminServiceScreen} />
+        <Stack.Screen name="FavoriteCenters" component={FavoriteCentersScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="OTPVerification" component={OTPVerificationScreen} />
         <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />

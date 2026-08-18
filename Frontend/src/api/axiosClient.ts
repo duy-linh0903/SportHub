@@ -26,6 +26,9 @@ axiosClient.interceptors.request.use(
   }
 );
 
+// Flag to prevent multiple logout calls
+let isLoggingOut = false;
+
 // Response Interceptor
 axiosClient.interceptors.response.use(
   (response) => {
@@ -33,8 +36,13 @@ axiosClient.interceptors.response.use(
   },
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Automatically log out if unauthorized
-      useAuthStore.getState().logout();
+      if (!isLoggingOut) {
+        isLoggingOut = true;
+        // Automatically log out if unauthorized
+        useAuthStore.getState().logout().finally(() => {
+          isLoggingOut = false;
+        });
+      }
     }
     return Promise.reject(error);
   }

@@ -36,7 +36,7 @@ namespace SportHub.Models
         {
             Id = Guid.NewGuid();
             Status = BookingStatus.Pending;
-            CreatedAt = DateTime.Now;
+            CreatedAt = DateTime.UtcNow;
         }
     }
 }

@@ -88,6 +88,7 @@ namespace SportHub.Services.Implementations
                 ServiceId = item.Id,
                 Name = item.Name,
                 Price = item.Price,
+                Type = item.Type,
                 Description = item.Description,
                 SportCenterId = item.SportCenterId
             };

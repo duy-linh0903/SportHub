@@ -82,6 +82,14 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
         <View style={styles.menuSection}>
           <TouchableOpacity
             style={styles.menuItem}
+            onPress={() => navigation.navigate('FavoriteCenters')}
+          >
+            <Ionicons name="heart-outline" size={20} color="#333" />
+            <Text style={styles.menuText}>Sân yêu thích</Text>
+            <Ionicons name="chevron-forward" size={18} color="#999" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
             onPress={() => navigation.navigate('EditProfile', { profile })}
           >
             <Ionicons name="person-outline" size={20} color="#333" />

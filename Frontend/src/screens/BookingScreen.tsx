@@ -5,8 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuthStore } from '../store/useAuthStore';
 import { bookingsApi } from '../api/bookingsApi';
-import { fieldsApi } from '../api/fieldsApi';
-import { BookingResponseDto, FieldResponseDto } from '../types/api';
+import { BookingResponseDto } from '../types/api';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
@@ -58,18 +57,13 @@ const BookingScreen = ({ navigation }: { navigation: any }) => {
     try {
       // Fetch bookings for the user
       const userBookings = await bookingsApi.getByUser(userId!);
-      // Fetch all fields to map the names
-      const allFields = await fieldsApi.getAll();
-      const fieldMap = new Map<string, FieldResponseDto>();
-      allFields.forEach(f => fieldMap.set(f.fieldId, f));
 
       const mappedBookings: BookingItem[] = userBookings.map(b => {
-        const field = fieldMap.get(b.fieldId);
         let status: 'pending' | 'confirmed' | 'completed' | 'cancelled' = 'pending';
         const bStatus = String(b.status).toLowerCase();
-        if (bStatus === 'confirmed' || bStatus === '1') status = 'confirmed';
-        if (bStatus === 'completed' || bStatus === '3') status = 'completed';
-        if (bStatus === 'cancelled' || bStatus === '2') status = 'cancelled';
+        if (bStatus === 'confirmed') status = 'confirmed';
+        else if (bStatus === 'completed') status = 'completed';
+        else if (bStatus === 'cancelled') status = 'cancelled';
 
         let formattedDate = b.bookingDate;
         try {
@@ -78,7 +72,7 @@ const BookingScreen = ({ navigation }: { navigation: any }) => {
 
         return {
           id: b.bookingId,
-          name: b.sportCenterName || field?.name || 'Sân thể thao',
+          name: b.sportCenterName || 'Sân thể thao',
           date: formattedDate,
           time: b.timeSlots || '',
           address: b.sportCenterAddress || 'Địa chỉ sân',
@@ -194,7 +188,7 @@ const BookingScreen = ({ navigation }: { navigation: any }) => {
                         <Text style={styles.qrText}>Lấy mã QR</Text>
                       </TouchableOpacity>
                     ) : (
-                      <TouchableOpacity style={styles.rebookBtn} onPress={() => navigation.navigate('SelectTime')}>
+                      <TouchableOpacity style={styles.rebookBtn} onPress={() => navigation.navigate('SelectTime', { sportCenterId: item.originalData.sportCenterId, sportCenterName: item.name, sportCenterAddress: item.address })}>
                         <Text style={styles.rebookText}>Đặt lại sân</Text>
                       </TouchableOpacity>
                     )}

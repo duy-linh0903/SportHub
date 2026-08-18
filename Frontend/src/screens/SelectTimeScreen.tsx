@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -39,12 +39,15 @@ const generateDates = () => {
     };
   });
 };
-const DATES = generateDates();
+// generateDates is called inside the component via useMemo
 
 // We will fetch time slots from the API instead of hardcoding them
 // const TIME_SLOTS = ...
 
 const SelectTimeScreen = ({ route, navigation }: Props) => {
+  // Generate dates inside component so they refresh when component re-renders
+  const DATES = useMemo(() => generateDates(), []);
+
   const sportCenterId = route.params?.sportCenterId;
   const [sportCenter, setSportCenter] = useState<SportCenterResponseDto | null>(null);
   const [fields, setFields] = useState<FieldResponseDto[]>([]);

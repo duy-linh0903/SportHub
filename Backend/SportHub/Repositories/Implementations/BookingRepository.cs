@@ -128,7 +128,7 @@ namespace SportHub.Repositories.Implementations
                 slotIds.Contains(bs.SlotId) &&
                 bs.Bookings.FieldId == fieldId &&
                 bs.Bookings.BookingDate == bookingDate &&
-                (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed));
+                (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed || bs.Bookings.Status == BookingStatus.Completed));
         }
 
         public async Task CreateBookingWithDetailsAsync(Bookings booking, List<BookingServices> bookingServices, List<BookingSlots> bookingSlots)
@@ -141,7 +141,7 @@ namespace SportHub.Repositories.Implementations
                     slotIds.Contains(bs.SlotId) &&
                     bs.Bookings.FieldId == booking.FieldId &&
                     bs.Bookings.BookingDate == booking.BookingDate &&
-                    (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed));
+                    (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed || bs.Bookings.Status == BookingStatus.Completed));
 
                 if (conflictExists)
                 {
@@ -174,7 +174,7 @@ namespace SportHub.Repositories.Implementations
                 .Where(bs =>
                     bs.Bookings.FieldId == fieldId &&
                     bs.Bookings.BookingDate == date &&
-                    (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed))
+                    (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed || bs.Bookings.Status == BookingStatus.Completed))
                 .Select(bs => bs.SlotId)
                 .ToListAsync();
         }

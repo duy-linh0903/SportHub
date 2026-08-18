@@ -29,7 +29,8 @@ namespace SportHub.Services.Implementations
                     CreatedAt = sc.CreatedAt,
                     images = sc.Images?.ToList(),
                     MinPrice = sc.Fields != null && sc.Fields.Any() ? sc.Fields.Min(f => f.PricePerSlot) : 0,
-                    Status = sc.Status.ToString()
+                    Status = sc.Status.ToString(),
+                    OwnerId = sc.OwnerId
                 });
             }
             return result;
@@ -50,8 +51,9 @@ namespace SportHub.Services.Implementations
                 Description = sportCenter.Description,
                 CreatedAt = sportCenter.CreatedAt,
                 images = sportCenter.Images?.ToList(),
-Status = sportCenter.Status.ToString(),
-                MinPrice = sportCenter.Fields != null && sportCenter.Fields.Any() ? sportCenter.Fields.Min(f => f.PricePerSlot) : 0
+                Status = sportCenter.Status.ToString(),
+                MinPrice = sportCenter.Fields != null && sportCenter.Fields.Any() ? sportCenter.Fields.Min(f => f.PricePerSlot) : 0,
+                OwnerId = sportCenter.OwnerId
             };
         }
 
@@ -76,7 +78,8 @@ Images = sportCenterDto.images?.Select(image => new SportCenterImages
                 Description = sportCenter.Description,
                 CreatedAt = sportCenter.CreatedAt,
                 images = sportCenter.Images?.ToList(),
-                Status = sportCenter.Status.ToString()
+                Status = sportCenter.Status.ToString(),
+                OwnerId = sportCenter.OwnerId
             };
         }
 
@@ -113,7 +116,8 @@ Images = sportCenterDto.images?.Select(image => new SportCenterImages
                 Description = sportCenter.Description,
                 CreatedAt = sportCenter.CreatedAt,
                 images = sportCenter.Images?.ToList(),
-                Status = sportCenter.Status.ToString()
+                Status = sportCenter.Status.ToString(),
+                OwnerId = sportCenter.OwnerId
             };
         }
 
@@ -150,7 +154,8 @@ var sportCenter = await _sportCenter.GetByIdAsync(id);
                     Description= sport.Description,
                     CreatedAt = sport.CreatedAt,
                     images = sport.Images?.ToList(),
-                    Status = sport.Status.ToString()
+                    Status = sport.Status.ToString(),
+                    OwnerId = sport.OwnerId
                 });
             }
             return result;
@@ -171,7 +176,8 @@ var sportCenter = await _sportCenter.GetByIdAsync(id);
                     CreatedAt = sc.CreatedAt,
                     images = sc.Images?.ToList(),
                     MinPrice = sc.Fields != null && sc.Fields.Any() ? sc.Fields.Min(f => f.PricePerSlot) : 0,
-                    Status = sc.Status.ToString()
+                    Status = sc.Status.ToString(),
+                    OwnerId = sc.OwnerId
                 });
             }
             return result;

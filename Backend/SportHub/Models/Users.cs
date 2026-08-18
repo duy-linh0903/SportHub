@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace SportHub.Models
 {
@@ -26,11 +26,14 @@ namespace SportHub.Models
         [Required]
         public UserStatus Status { get; set; }
         public DateTime CreatedAt {  get; set; }
+        public string? Otp { get; set; }
+        public DateTime? OtpExpiry { get; set; }
+        public int OtpAttempts { get; set; } = 0;
 
         public Users()
         {
             Id = Guid.NewGuid();
-            CreatedAt = DateTime.Now;
+            CreatedAt = DateTime.UtcNow;
         }
     }
 }

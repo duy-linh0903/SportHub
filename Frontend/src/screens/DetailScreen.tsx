@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   StatusBar,
   ActivityIndicator,
-  Image
+  Image,
+  Share,
+  Alert
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,6 +19,7 @@ import { RootStackParamList } from '../../App';
 import { sportCentersApi } from '../api/sportCentersApi';
 import { fieldsApi } from '../api/fieldsApi';
 import { reviewsApi } from '../api/reviewsApi';
+import { favoritesApi } from '../api/favoritesApi';
 import { SportCenterResponseDto, FieldResponseDto } from '../types/api';
 
 type DetailScreenRouteProp = RouteProp<RootStackParamList, 'Detail'>;
@@ -33,6 +36,7 @@ const DetailScreen = ({ route, navigation }: Props) => {
   const [fields, setFields] = useState<FieldResponseDto[]>([]);
   const [ratingInfo, setRatingInfo] = useState({ avg: 0, count: 0 });
   const [loading, setLoading] = useState(true);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     if (sportCenterId) {
@@ -53,6 +57,14 @@ const DetailScreen = ({ route, navigation }: Props) => {
       const count = reviews.length;
       const avg = count > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / count : 0;
       setRatingInfo({ avg, count });
+
+      // Load favorite status
+      try {
+        const favoriteStatus = await favoritesApi.checkIsFavorite(sportCenterId!);
+        setIsFavorite(favoriteStatus);
+      } catch (favErr) {
+        console.warn('Could not check favorite status', favErr);
+      }
     } catch (error) {
       console.error('Failed to fetch detail', error);
     } finally {
@@ -84,6 +96,28 @@ const DetailScreen = ({ route, navigation }: Props) => {
     ? Math.min(...fields.map(f => f.pricePerSlot))
     : 0;
 
+  const handleToggleFavorite = async () => {
+    try {
+      await favoritesApi.toggleFavorite(sportCenterId!);
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.error('Failed to toggle favorite', error);
+      Alert.alert('Lỗi', 'Không thể thực hiện. Vui lòng đăng nhập.');
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const result = await Share.share({
+        message: `Khám phá sân thể thao ${sportCenter?.name} tại SportHub!\nĐịa chỉ: ${sportCenter?.address}\nĐặt sân ngay: https://sporthub.vn/center/${sportCenterId}`,
+        title: `Chia sẻ ${sportCenter?.name}`
+      });
+      // You can handle success callbacks if needed
+    } catch (error: any) {
+      Alert.alert('Lỗi chia sẻ', error.message);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
@@ -105,11 +139,11 @@ const DetailScreen = ({ route, navigation }: Props) => {
               <Ionicons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
             <View style={styles.rightButtons}>
-              <TouchableOpacity style={styles.iconButton}>
+              <TouchableOpacity style={styles.iconButton} onPress={handleShare}>
                 <Ionicons name="share-social-outline" size={20} color="#fff" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.iconButton}>
-                <Ionicons name="heart-outline" size={20} color="#fff" />
+              <TouchableOpacity style={styles.iconButton} onPress={handleToggleFavorite}>
+                <Ionicons name={isFavorite ? "heart" : "heart-outline"} size={20} color={isFavorite ? "#ef4444" : "#fff"} />
               </TouchableOpacity>
             </View>
           </View>

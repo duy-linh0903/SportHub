@@ -9,6 +9,7 @@ namespace SportHub.DTOs.Service
         public string Name { get; set; }
         [Required, Range(0, double.MaxValue)]
         public double Price { get; set; }
+        public string Type { get; set; }
         public string? Description { get; set; }
         public Guid? SportCenterId { get; set; }
     }

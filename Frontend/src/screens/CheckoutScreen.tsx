@@ -31,6 +31,7 @@ const PAYMENT_METHODS: PaymentMethod[] = [
 
 const CheckoutScreen = ({ navigation, route }: { navigation: any; route: any }) => {
   const { userId, isAuthenticated } = useAuthStore();
+  const addNotification = useNotificationStore((state) => state.addNotification);
   const { bookingData, selectedServices } = route.params || {};
 
   const [selectedPayment, setSelectedPayment] = useState(PAYMENT_METHODS[0].id);
@@ -62,6 +63,13 @@ const CheckoutScreen = ({ navigation, route }: { navigation: any; route: any }) 
       };
 
       const result = await bookingsApi.create(createBookingDto);
+
+      addNotification({
+        type: 'booking',
+        title: 'Đặt sân thành công!',
+        message: `Bạn đã đặt ${bookingData?.field?.name} vào ngày ${bookingData?.bookingDate}. Tổng thanh toán: ${totalPrice.toLocaleString('vi-VN')}đ.`,
+        bookingId: result.bookingId
+      }, userId);
 
       if (selectedPayment !== 'cash') {
         // Generate mock payment URL for VNPay

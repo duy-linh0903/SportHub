@@ -22,11 +22,20 @@ namespace SportHub.Middleware
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Unhandled exception");
+                _logger.LogError(ex, "Unhandled exception: {Message}", ex.Message);
                 context.Response.ContentType = "application/json";
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
 
-                var response = new { message = ex.Message };
+                var (statusCode, message) = ex switch
+                {
+                    KeyNotFoundException => ((int)HttpStatusCode.NotFound, ex.Message),
+                    ArgumentException => ((int)HttpStatusCode.BadRequest, ex.Message),
+                    InvalidOperationException => ((int)HttpStatusCode.Conflict, ex.Message),
+                    UnauthorizedAccessException => ((int)HttpStatusCode.Forbidden, "Access denied."),
+                    _ => ((int)HttpStatusCode.InternalServerError, "An unexpected error occurred. Please try again later.")
+                };
+
+                context.Response.StatusCode = statusCode;
+                var response = new { message };
                 var json = JsonSerializer.Serialize(response);
                 await context.Response.WriteAsync(json);
             }

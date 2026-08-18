@@ -12,6 +12,7 @@ const AdminServiceScreen = ({ route, navigation }: { route: any; navigation: any
   
   // Form for new service
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [type, setType] = useState('Equipment');
@@ -35,7 +36,7 @@ const AdminServiceScreen = ({ route, navigation }: { route: any; navigation: any
     }
   };
 
-  const handleCreate = async () => {
+  const handleSave = async () => {
     if (!name || !price) {
       Alert.alert('Lỗi', 'Vui lòng nhập tên và giá');
       return;
@@ -43,25 +44,45 @@ const AdminServiceScreen = ({ route, navigation }: { route: any; navigation: any
 
     setIsSubmitting(true);
     try {
-      await servicesApi.create({
-        name,
-        price: parseFloat(price),
-        type,
-        description,
-        sportCenterId
-      });
+      if (editingId) {
+        await servicesApi.update(editingId, {
+          name,
+          price: parseFloat(price),
+          type,
+          description,
+        });
+        Alert.alert('Thành công', 'Đã cập nhật dịch vụ.');
+      } else {
+        await servicesApi.create({
+          name,
+          price: parseFloat(price),
+          type,
+          description,
+          sportCenterId
+        });
+        Alert.alert('Thành công', 'Đã thêm dịch vụ.');
+      }
       setShowForm(false);
+      setEditingId(null);
       setName('');
       setPrice('');
       setDescription('');
       loadServices();
-      Alert.alert('Thành công', 'Đã thêm dịch vụ.');
     } catch (error) {
       console.error(error);
-      Alert.alert('Lỗi', 'Không thể thêm dịch vụ.');
+      Alert.alert('Lỗi', 'Không thể lưu dịch vụ.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEdit = (svc: ServiceResponseDto) => {
+    setEditingId(svc.serviceId);
+    setName(svc.name);
+    setPrice(svc.price.toString());
+    setType(svc.type);
+    setDescription(svc.description || '');
+    setShowForm(true);
   };
 
   const handleDelete = (id: string) => {
@@ -99,7 +120,15 @@ const AdminServiceScreen = ({ route, navigation }: { route: any; navigation: any
           <Text style={styles.subHeaderTitle}>Danh sách dịch vụ</Text>
           <TouchableOpacity 
             style={styles.addButton}
-            onPress={() => setShowForm(!showForm)}
+            onPress={() => {
+              setShowForm(!showForm);
+              if (showForm) {
+                setEditingId(null);
+                setName('');
+                setPrice('');
+                setDescription('');
+              }
+            }}
           >
             <Ionicons name={showForm ? 'close' : 'add'} size={18} color="#fff" />
             <Text style={styles.addButtonText}>{showForm ? 'Hủy' : 'Thêm'}</Text>
@@ -108,7 +137,7 @@ const AdminServiceScreen = ({ route, navigation }: { route: any; navigation: any
 
         {showForm && (
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Thêm dịch vụ mới</Text>
+            <Text style={styles.formTitle}>{editingId ? 'Cập nhật dịch vụ' : 'Thêm dịch vụ mới'}</Text>
             
             <Text style={styles.label}>Tên dịch vụ</Text>
             <TextInput style={styles.input} placeholder="Vd: Nước suối" value={name} onChangeText={setName} />
@@ -124,7 +153,7 @@ const AdminServiceScreen = ({ route, navigation }: { route: any; navigation: any
 
             <TouchableOpacity 
               style={styles.submitBtn} 
-              onPress={handleCreate}
+              onPress={handleSave}
               disabled={isSubmitting}
             >
               {isSubmitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitText}>Lưu</Text>}
@@ -146,15 +175,17 @@ const AdminServiceScreen = ({ route, navigation }: { route: any; navigation: any
                   {svc.description ? <Text style={styles.serviceDesc}>{svc.description}</Text> : null}
                 </View>
                 <View style={styles.serviceActions}>
-                  {!svc.sportCenterId ? (
+                  {!svc.sportCenterId && (
                     <View style={styles.defaultBadge}>
                       <Text style={styles.defaultText}>Mặc định</Text>
                     </View>
-                  ) : (
-                    <TouchableOpacity onPress={() => handleDelete(svc.serviceId)} style={styles.delBtn}>
-                      <Ionicons name="trash-outline" size={20} color="#ef4444" />
-                    </TouchableOpacity>
                   )}
+                  <TouchableOpacity onPress={() => handleEdit(svc)} style={styles.actionBtn}>
+                    <Ionicons name="pencil-outline" size={20} color="#3b82f6" />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => handleDelete(svc.serviceId)} style={styles.actionBtn}>
+                    <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                  </TouchableOpacity>
                 </View>
               </View>
             ))
@@ -190,6 +221,7 @@ const styles = StyleSheet.create({
   serviceActions: { flexDirection: 'row', alignItems: 'center', marginLeft: 12 },
   defaultBadge: { backgroundColor: '#f1f5f9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4 },
   defaultText: { fontSize: 12, color: '#64748b' },
+  actionBtn: { padding: 4, marginLeft: 8 },
   delBtn: { padding: 4 },
   emptyText: { textAlign: 'center', color: '#94a3b8', marginTop: 20 },
 });

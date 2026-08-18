@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -96,8 +96,7 @@ namespace SportHub.Migrations
                     Type = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     PricePerSlot = table.Column<double>(type: "float", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    SportCentersId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -108,11 +107,6 @@ namespace SportHub.Migrations
                         principalTable: "SportCenters",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Fields_SportCenters_SportCentersId",
-                        column: x => x.SportCentersId,
-                        principalTable: "SportCenters",
-                        principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -221,8 +215,7 @@ namespace SportHub.Migrations
                 columns: table => new
                 {
                     BookingId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    SlotId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    BookingsId = table.Column<Guid>(type: "uniqueidentifier", nullable: true)
+                    SlotId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -233,11 +226,6 @@ namespace SportHub.Migrations
                         principalTable: "Bookings",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_BookingSlots_Bookings_BookingsId",
-                        column: x => x.BookingsId,
-                        principalTable: "Bookings",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_BookingSlots_TimeSlots_SlotId",
                         column: x => x.SlotId,
@@ -300,10 +288,6 @@ namespace SportHub.Migrations
                 table: "BookingServices",
                 column: "ServiceId");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_BookingSlots_BookingsId",
-                table: "BookingSlots",
-                column: "BookingsId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_BookingSlots_SlotId",
@@ -315,10 +299,6 @@ namespace SportHub.Migrations
                 table: "Fields",
                 column: "SportCenterId");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_Fields_SportCentersId",
-                table: "Fields",
-                column: "SportCentersId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Reviews_BookingId",

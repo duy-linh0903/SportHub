@@ -1,4 +1,4 @@
-﻿using SportHub.DTOs.Field;
+using SportHub.DTOs.Field;
 using SportHub.DTOs.SportCenter;
 using SportHub.Models;
 using SportHub.Repositories.Interfaces;
@@ -25,7 +25,8 @@ namespace SportHub.Services.Implementations
                     FieldId = field.Id,
                     Name = field.Name,
                     Type = field.Type,
-                    PricePerSlot = field.PricePerSlot
+                    PricePerSlot = field.PricePerSlot,
+                    SportCenterId = field.SportCenterId
                 });
             }
             return result;
@@ -43,7 +44,8 @@ namespace SportHub.Services.Implementations
                 FieldId = field.Id,
                 Name = field.Name,
                 Type = field.Type,
-                PricePerSlot = field.PricePerSlot
+                PricePerSlot = field.PricePerSlot,
+                SportCenterId = field.SportCenterId
             };
         }
 
@@ -62,7 +64,8 @@ namespace SportHub.Services.Implementations
                 FieldId = field.Id,
                 Name = field.Name,
                 Type = field.Type,
-                PricePerSlot = field.PricePerSlot
+                PricePerSlot = field.PricePerSlot,
+                SportCenterId = field.SportCenterId
             };
         }
 
@@ -83,7 +86,8 @@ namespace SportHub.Services.Implementations
                 FieldId = field.Id,
                 Name = field.Name,
                 Type = field.Type,
-                PricePerSlot = field.PricePerSlot
+                PricePerSlot = field.PricePerSlot,
+                SportCenterId = field.SportCenterId
             };
         }
 
@@ -125,7 +129,8 @@ namespace SportHub.Services.Implementations
                     FieldId = field.Id,
                     Name = field.Name,
                     Type = field.Type,
-                    PricePerSlot = field.PricePerSlot
+                    PricePerSlot = field.PricePerSlot,
+                    SportCenterId = field.SportCenterId
                 });
             }
             return result;

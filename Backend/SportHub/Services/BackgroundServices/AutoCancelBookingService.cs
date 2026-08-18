@@ -42,7 +42,7 @@ namespace SportHub.Services.BackgroundServices
             using var scope = _scopeFactory.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             // Lấy ra các Booking đang chờ hoặc đã xác nhận
             var bookingsToCheck = await context.Bookings

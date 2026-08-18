@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SportHub.Data;
 
@@ -11,9 +12,11 @@ using SportHub.Data;
 namespace SportHub.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260817163232_AddFavoriteSportCenters")]
+    partial class AddFavoriteSportCenters
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -102,30 +105,6 @@ namespace SportHub.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Bookings");
-                });
-
-            modelBuilder.Entity("SportHub.Models.FavoriteSportCenters", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("SportCenterId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SportCenterId");
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("FavoriteSportCenters");
                 });
 
             modelBuilder.Entity("SportHub.Models.Fields", b =>
@@ -368,9 +347,6 @@ namespace SportHub.Migrations
                     b.Property<string>("Otp")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("OtpAttempts")
-                        .HasColumnType("int");
-
                     b.Property<DateTime?>("OtpExpiry")
                         .HasColumnType("datetime2");
 
@@ -445,25 +421,6 @@ namespace SportHub.Migrations
                         .IsRequired();
 
                     b.Navigation("Fields");
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("SportHub.Models.FavoriteSportCenters", b =>
-                {
-                    b.HasOne("SportHub.Models.SportCenters", "SportCenter")
-                        .WithMany()
-                        .HasForeignKey("SportCenterId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.HasOne("SportHub.Models.Users", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired();
-
-                    b.Navigation("SportCenter");
 
                     b.Navigation("User");
                 });

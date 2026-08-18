@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace SportHub.DTOs.Field
 {
@@ -8,5 +8,6 @@ namespace SportHub.DTOs.Field
         public string Name { get; set; }
         public string Type { get; set; }
         public double PricePerSlot { get; set; }
+        public Guid SportCenterId { get; set; }
     }
 }

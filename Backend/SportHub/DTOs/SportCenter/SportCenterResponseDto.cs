@@ -15,5 +15,6 @@ namespace SportHub.DTOs.SportCenter
         public List<SportCenterImages> images { get; set; }
         public double MinPrice { get; set; }
         public string Status { get; set; }
+        public Guid? OwnerId { get; set; }
     }
 }

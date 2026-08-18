@@ -91,6 +91,12 @@ namespace SportHub.Services.Implementations
                 throw new ArgumentException("At least one time slot must be selected.");
             }
 
+            // Validate: Cannot book a date in the past
+            if (bookingDto.BookingDate < DateOnly.FromDateTime(DateTime.UtcNow))
+            {
+                throw new ArgumentException("Cannot book a date in the past.");
+            }
+
             var slotIds = bookingDto.SlotIds.Distinct().ToList();
             var timeSlots = await _bookingRepository.GetTimeSlotsByIdsAsync(slotIds);
 
@@ -113,7 +119,7 @@ namespace SportHub.Services.Implementations
                 BookingDate = bookingDto.BookingDate,
                 TotalPrice = 0,
                 Status = BookingStatus.Pending,
-                CreatedAt = DateTime.Now,
+                CreatedAt = DateTime.UtcNow,
                 CheckInCode = GenerateCheckInCode()
             };
 
@@ -256,7 +262,7 @@ namespace SportHub.Services.Implementations
 
         private static string GenerateCheckInCode()
         {
-            return Guid.NewGuid().ToString("N").Substring(0, 8).ToUpperInvariant();
+            return Guid.NewGuid().ToString("N").Substring(0, 12).ToUpperInvariant();
         }
 
         public BookingResponseDto BookingServiceDto(Bookings booking)

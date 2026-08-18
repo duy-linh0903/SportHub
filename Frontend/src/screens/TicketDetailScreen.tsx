@@ -134,19 +134,20 @@ const TicketDetailScreen = ({ navigation, route }: { navigation: any; route: any
   }
 
   const finalStatus = booking?.status !== undefined ? booking.status : passedField?.status !== undefined ? passedField.status : 'Pending';
+  const normalizedStatus = String(finalStatus).toLowerCase();
   let statusText = 'CHỜ DUYỆT';
   let statusColor = '#F97316';
   let statusBg = '#fff7ed';
   
-  if (finalStatus === 'Confirmed' || finalStatus === 'confirmed' || finalStatus === 1) {
+  if (normalizedStatus === 'confirmed') {
     statusText = 'ĐÃ XÁC NHẬN';
     statusColor = '#16a34a';
     statusBg = '#dcfce7';
-  } else if (finalStatus === 'Cancelled' || finalStatus === 'cancelled' || finalStatus === 2) {
+  } else if (normalizedStatus === 'cancelled') {
     statusText = 'ĐÃ TỪ CHỐI / HỦY';
     statusColor = '#ba1a1a';
     statusBg = '#fef2f2';
-  } else if (finalStatus === 'Completed' || finalStatus === 'completed' || finalStatus === 3) {
+  } else if (normalizedStatus === 'completed') {
     statusText = 'ĐÃ XONG';
     statusColor = '#666';
     statusBg = '#f2f4f6';

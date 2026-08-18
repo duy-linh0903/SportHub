@@ -33,7 +33,7 @@ namespace SportHub.Models
         public SportCenters()
         {
             Id = Guid.NewGuid();
-            CreatedAt = DateTime.Now;
+            CreatedAt = DateTime.UtcNow;
         }
     }
 }

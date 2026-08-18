@@ -30,11 +30,13 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddScoped<IFieldService, FieldService>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 builder.Services.AddScoped<IServiceItemService, ServiceItemService>();
 builder.Services.AddScoped<ISportCenterService, SportCenterService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtHelper, JwtHelper>();
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
 // Add services to the container.
 builder.Services.AddCors(options =>

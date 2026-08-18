@@ -34,6 +34,12 @@ namespace SportHub.Repositories.Implementations
             return result;
         }
 
+        public async Task<Reviews?> GetByBookingAndUserAsync(Guid bookingId, Guid userId)
+        {
+            return await _context.Reviews
+                .FirstOrDefaultAsync(r => r.BookingId == bookingId && r.UserId == userId);
+        }
+
         public async Task AddAsync(Reviews review)
         {
             await _context.Reviews.AddAsync(review);

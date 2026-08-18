@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportHub.DTOs.Booking;
 using SportHub.Services.Interfaces;
-using System.Security.Claims;
 
 namespace SportHub.Controllers
 {
@@ -13,10 +12,12 @@ namespace SportHub.Controllers
     public class BookingsController : ControllerBase
     {
         private readonly IBookingService _bookingService;
+        private readonly ISportCenterService _sportCenterService;
 
-        public BookingsController(IBookingService bookingService)
+        public BookingsController(IBookingService bookingService, ISportCenterService sportCenterService)
         {
             _bookingService = bookingService;
+            _sportCenterService = sportCenterService;
         }
 
         private Guid? GetCurrentUserId()
@@ -81,6 +82,16 @@ namespace SportHub.Controllers
             try
             {
                 var booking = await _bookingService.GetBookingByCheckInCodeAsync(code);
+                if (booking == null) return NotFound();
+
+                // Only the booking owner or Admin can view by check-in code
+                var currentUserId = GetCurrentUserId();
+                if (!currentUserId.HasValue) return Forbid();
+                if (!User.IsInRole("Admin") && booking.UserId != currentUserId.Value)
+                {
+                    return Forbid();
+                }
+
                 return Ok(booking);
             }
             catch (KeyNotFoundException)
@@ -107,6 +118,15 @@ namespace SportHub.Controllers
         [HttpPut("{bookingId:guid}/status")]
         public async Task<IActionResult> UpdateStatus(Guid bookingId, [FromBody] UpdateBookingStatusDto request)
         {
+            var ownerId = GetCurrentUserId();
+            if (!ownerId.HasValue) return Unauthorized();
+
+            var booking = await _bookingService.GetBookingByIdAsync(bookingId);
+            if (booking == null) return NotFound();
+
+            var sportCenter = await _sportCenterService.GetSportCenterByIdAsync(booking.SportCenterId);
+            if (sportCenter != null && sportCenter.OwnerId != ownerId.Value) return Forbid();
+
             await _bookingService.UpdateBookingStatusAsync(bookingId, request.Status);
             return NoContent();
         }
@@ -177,6 +197,13 @@ namespace SportHub.Controllers
         {
             var bookings = await _bookingService.GetBookingsByDateRangeAsync(startDate, endDate);
             return Ok(bookings);
+        }
+
+        [HttpGet("booked-slots")]
+        public async Task<ActionResult<List<Guid>>> GetBookedSlots([FromQuery] Guid fieldId, [FromQuery] DateOnly date)
+        {
+            var bookedSlots = await _bookingService.GetBookedSlotIdsAsync(fieldId, date);
+            return Ok(bookedSlots);
         }
     }
 }

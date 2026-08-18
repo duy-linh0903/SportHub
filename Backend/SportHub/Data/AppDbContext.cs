@@ -19,6 +19,7 @@ namespace SportHub.Data
         public DbSet<BookingSlots> BookingSlots { get; set; }
         public DbSet<Reviews> Reviews { get; set; }
         public DbSet<SportCenterImages> SportCenterImages { get; set; }
+        public DbSet<FavoriteSportCenters> FavoriteSportCenters { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -116,6 +117,17 @@ namespace SportHub.Data
                 .WithMany()
                 .HasForeignKey(r => r.BookingId);
 
+            modelBuilder.Entity<FavoriteSportCenters>()
+                .HasOne(f => f.User)
+                .WithMany()
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
+
+            modelBuilder.Entity<FavoriteSportCenters>()
+                .HasOne(f => f.SportCenter)
+                .WithMany()
+                .HasForeignKey(f => f.SportCenterId)
+                .OnDelete(DeleteBehavior.NoAction);
         }
     }
 }

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SportHub.DTOs.Review;
 using SportHub.Services.Interfaces;
-using System.Security.Claims;
 
 namespace SportHub.Controllers
 {

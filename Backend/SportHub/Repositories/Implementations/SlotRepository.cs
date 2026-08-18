@@ -32,7 +32,7 @@ namespace SportHub.Repositories.Implementations
                     bs.SlotId == slot.Id &&
                     bs.Bookings.FieldId == request.fieldId &&
                     bs.Bookings.BookingDate == request.date &&
-                    (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed));
+                    (bs.Bookings.Status == BookingStatus.Pending || bs.Bookings.Status == BookingStatus.Confirmed || bs.Bookings.Status == BookingStatus.Completed));
 
                 result.Add(new TimeSlotResponseDto
                 {
