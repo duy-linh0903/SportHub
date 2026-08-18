@@ -36,6 +36,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   logout: async () => {
     await AsyncStorage.removeItem('accessToken');
+    try {
+      const { GoogleSignin } = require('@react-native-google-signin/google-signin');
+      await GoogleSignin.signOut();
+    } catch (e) {}
+    try {
+      const { LoginManager } = require('react-native-fbsdk-next');
+      LoginManager.logOut();
+    } catch (e) {}
     set({ token: null, role: null, userId: null, isAuthenticated: false });
   },
   initialize: async () => {

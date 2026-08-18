@@ -52,6 +52,33 @@ const AdminProfileScreen = ({ navigation }: { navigation: any }) => {
     ]);
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Xác nhận xóa tài khoản',
+      'Bạn có chắc chắn muốn xóa tài khoản này? Hành động này sẽ xóa dữ liệu tài khoản của bạn và không thể hoàn tác.',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa vĩnh viễn',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (userId) {
+                await usersApi.delete(userId);
+              }
+              await logout();
+              Alert.alert('Thành công', 'Tài khoản của bạn đã được xóa.');
+              navigation.replace('Login');
+            } catch (error) {
+              console.error('Delete account error:', error);
+              Alert.alert('Lỗi', 'Không thể xóa tài khoản. Vui lòng thử lại sau.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleSwitchAccount = () => {
     navigation.replace('RoleSelection');
   };
@@ -154,6 +181,11 @@ const AdminProfileScreen = ({ navigation }: { navigation: any }) => {
             <Ionicons name="log-out-outline" size={20} color="#ef4444" />
             <Text style={styles.logoutText}>Đăng xuất</Text>
           </TouchableOpacity>
+
+          <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteAccount}>
+            <Ionicons name="trash-outline" size={20} color="#dc2626" />
+            <Text style={styles.deleteText}>Xóa tài khoản</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -202,6 +234,8 @@ const styles = StyleSheet.create({
   switchAccountText: { fontSize: 15, fontWeight: '600', color: '#4b5563' },
   logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fef2f2', paddingVertical: 16, borderRadius: 16, borderWidth: 1, borderColor: '#fecaca', gap: 8 },
   logoutText: { fontSize: 15, fontWeight: 'bold', color: '#ef4444' },
+  deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff', paddingVertical: 16, borderRadius: 16, borderWidth: 1, borderColor: '#fecaca', gap: 8 },
+  deleteText: { fontSize: 15, fontWeight: 'bold', color: '#dc2626' },
 });
 
 export default AdminProfileScreen;

@@ -10,5 +10,6 @@ namespace SportHub.Services.Interfaces
         Task ForgotPasswordAsync(ForgotPasswordRequestDto dto);
         Task VerifyOtpAsync(VerifyOtpRequestDto dto);
         Task ResetPasswordAsync(ResetPasswordRequestDto dto);
+        Task<LoginResponseDto> ExternalLoginAsync(ExternalLoginRequestDto dto);
     }
 }

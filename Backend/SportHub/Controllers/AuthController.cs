@@ -65,5 +65,12 @@ namespace SportHub.Controllers
             await _authService.ResetPasswordAsync(dto);
             return Ok(new { Message = "Password reset successfully." });
         }
+
+        [HttpPost("external-login")]
+        public async Task<ActionResult<LoginResponseDto>> ExternalLogin([FromBody] ExternalLoginRequestDto dto)
+        {
+            var result = await _authService.ExternalLoginAsync(dto);
+            return Ok(result);
+        }
     }
 }

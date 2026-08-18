@@ -25,7 +25,7 @@ const loginSchema = yup.object().shape({
 
 // Ensure GoogleSignin is configured before calling signIn
 GoogleSignin.configure({
-  webClientId: '822337579211-2qonpdfg7rk12jir44nkemujs30qjsac.apps.googleusercontent.com',
+  webClientId: '822337579211-994ko9cihjsb49v6elndd5tnt1h6oa74.apps.googleusercontent.com',
 });
 
 const LoginScreen = ({ navigation }: Props) => {
@@ -56,12 +56,17 @@ const LoginScreen = ({ navigation }: Props) => {
 
   const onGoogleButtonPress = async () => {
     try {
-      await GoogleSignin.hasPlayServices();
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      try {
+        await GoogleSignin.signOut();
+      } catch (e) {
+        // ignore if already signed out
+      }
       const response = await GoogleSignin.signIn();
-      const idToken = response.data?.idToken;
+      const idToken = response.data?.idToken || (response as any).idToken;
       
       if (!idToken) {
-        throw new Error('No ID token found');
+        throw new Error('Không lấy được Google ID Token');
       }
 
       setLoading(true);
@@ -74,11 +79,10 @@ const LoginScreen = ({ navigation }: Props) => {
       } else if (error.code === statusCodes.IN_PROGRESS) {
         // operation (e.g. sign in) is in progress already
       } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        // play services not available or outdated
-        Alert.alert('Lỗi', 'Google Play Services không khả dụng.');
+        Alert.alert('Lỗi', 'Google Play Services không khả dụng hoặc đã cũ.');
       } else {
         console.error('Google Sign-In Error:', error);
-        Alert.alert('Lỗi', 'Đăng nhập Google thất bại.');
+        Alert.alert('Lỗi', `Đăng nhập Google thất bại: ${error?.message || error?.code || 'Vui lòng thử lại.'}`);
       }
     } finally {
       setLoading(false);
@@ -87,6 +91,11 @@ const LoginScreen = ({ navigation }: Props) => {
 
   const onFacebookButtonPress = async () => {
     try {
+      try {
+        LoginManager.logOut();
+      } catch (e) {
+        // ignore if already logged out
+      }
       const result = await LoginManager.logInWithPermissions(['public_profile', 'email']);
       
       if (result.isCancelled) {
@@ -95,7 +104,7 @@ const LoginScreen = ({ navigation }: Props) => {
       
       const data = await AccessToken.getCurrentAccessToken();
       if (!data) {
-        throw new Error('Something went wrong obtaining access token');
+        throw new Error('Không thể lấy Facebook Access Token');
       }
 
       setLoading(true);
@@ -104,7 +113,7 @@ const LoginScreen = ({ navigation }: Props) => {
       navigation.replace('RoleSelection');
     } catch (error: any) {
       console.error('Facebook Sign-In Error:', error);
-      Alert.alert('Lỗi', 'Đăng nhập Facebook thất bại.');
+      Alert.alert('Lỗi', `Đăng nhập Facebook thất bại: ${error?.message || 'Vui lòng thử lại.'}`);
     } finally {
       setLoading(false);
     }

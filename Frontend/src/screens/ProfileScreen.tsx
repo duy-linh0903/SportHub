@@ -46,6 +46,33 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
     ]);
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Xác nhận xóa tài khoản',
+      'Bạn có chắc chắn muốn xóa tài khoản này? Hành động này sẽ xóa dữ liệu tài khoản của bạn và không thể hoàn tác.',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa vĩnh viễn',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (userId) {
+                await usersApi.delete(userId);
+              }
+              await logout();
+              Alert.alert('Thành công', 'Tài khoản của bạn đã được xóa.');
+              navigation.replace('Login');
+            } catch (error) {
+              console.error('Delete account error:', error);
+              Alert.alert('Lỗi', 'Không thể xóa tài khoản. Vui lòng thử lại sau.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   if (!isAuthenticated) {
     return (
       <SafeAreaView style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -129,6 +156,14 @@ const ProfileScreen = ({ navigation }: { navigation: any }) => {
           <Ionicons name="log-out-outline" size={20} color="#ba1a1a" />
           <Text style={styles.logoutText}>Đăng xuất</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.deleteBtn}
+          onPress={handleDeleteAccount}
+        >
+          <Ionicons name="trash-outline" size={20} color="#dc2626" />
+          <Text style={styles.deleteText}>Xóa tài khoản</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -145,8 +180,10 @@ const styles = StyleSheet.create({
   menuSection: { backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, marginBottom: 24, borderWidth: 1, borderColor: '#e2e8f0' },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#f2f4f6', gap: 12 },
   menuText: { flex: 1, fontSize: 15, color: '#333', fontWeight: '500' },
-  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#ffdada', gap: 8 },
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#ffdada', gap: 8, marginBottom: 12 },
   logoutText: { color: '#ba1a1a', fontSize: 16, fontWeight: 'bold' },
+  deleteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#fecaca', gap: 8 },
+  deleteText: { color: '#dc2626', fontSize: 16, fontWeight: 'bold' },
   switchAccountBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#dbeafe', gap: 8, marginBottom: 12 },
   switchAccountText: { color: '#1E40AF', fontSize: 16, fontWeight: 'bold' },
   loginBtn: { marginTop: 24, backgroundColor: '#22c55e', paddingHorizontal: 32, paddingVertical: 12, borderRadius: 12 },

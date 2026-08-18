@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -63,6 +63,33 @@ const SettingsScreen = ({ navigation }: { navigation: any }) => {
   const handleLogout = async () => {
     await logout();
     navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Xác nhận xóa tài khoản',
+      'Bạn có chắc chắn muốn xóa tài khoản này? Hành động này sẽ xóa dữ liệu tài khoản của bạn và không thể hoàn tác.',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa vĩnh viễn',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              if (userId) {
+                await usersApi.delete(userId);
+              }
+              await logout();
+              Alert.alert('Thành công', 'Tài khoản của bạn đã được xóa.');
+              navigation.reset({ index: 0, routes: [{ name: 'Login' }] });
+            } catch (error) {
+              console.error('Delete account error:', error);
+              Alert.alert('Lỗi', 'Không thể xóa tài khoản. Vui lòng thử lại sau.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -143,6 +170,11 @@ const SettingsScreen = ({ navigation }: { navigation: any }) => {
         <TouchableOpacity style={[styles.logoutBtn, { backgroundColor: cardColor, borderColor: '#ffdada' }]} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color="#ba1a1a" />
           <Text style={styles.logoutText}>Đăng xuất</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[styles.deleteBtn, { backgroundColor: cardColor, borderColor: '#fee2e2' }]} onPress={handleDeleteAccount}>
+          <Ionicons name="trash-outline" size={20} color="#dc2626" />
+          <Text style={styles.deleteText}>Xóa tài khoản</Text>
         </TouchableOpacity>
 
         <Text style={styles.versionText}>Phiên bản 2.4.0 (Build 1032)</Text>
@@ -237,9 +269,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#ffdada',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
   logoutText: { color: '#ba1a1a', fontSize: 15, fontWeight: 'bold' },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    gap: 8,
+    marginBottom: 16,
+  },
+  deleteText: { color: '#dc2626', fontSize: 15, fontWeight: 'bold' },
   versionText: { textAlign: 'center', fontSize: 12, color: '#9ca3af' },
 });
 
